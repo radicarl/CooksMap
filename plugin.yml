@@ -1,0 +1,40 @@
+name: CooksMap
+main: de.radicarlprogramming.minecraft.cooksmap.CooksMapPlugin
+author: Carl Volhard
+version: 0.1
+commands:
+    cmap:
+        description: Shows the Help for CooksMap.
+        usage: |
+            /<command> set <id>
+            /<command> add <type> <name>
+            /<command> rm <id>
+            /<command> dist
+      
+permissions:
+    cmap.*:
+        default: true
+        description: Allows use of all CooksMap commands.
+        children:
+            cmap.set: true
+            cmap.add: true
+            cmap.list: true
+            cmap.rm: true
+            cmap.dist: true
+    cmap.set:
+        description: Allows player to sets location with the given id as compass target
+        default: true
+    cmap.add:
+        description: Allows Player to adds current location to the map
+        default: true   
+    cmap.list:
+        description: Allows player to list all landmarks
+        default: true 
+    cmap.rm:
+        description: Allows player to remove own landmarks
+        default: true 
+    cmap.dist:
+        description: Allows player to see the distance to his compass target
+        default: true 
+        
+      
