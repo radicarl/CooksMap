@@ -1,5 +1,8 @@
 package de.radicarlprogramming.minecraft.cooksmap;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.logging.Logger;
 
@@ -25,8 +28,16 @@ public class CooksMapPlugin extends JavaPlugin {
 	private Map getMap(World world) {
 		Map map = this.maps.get(world);
 		if (map == null) {
-			// TODO: read landmarks from config file
 			map = new Map();
+			File file = new File(this.getDataFolder(), world.getName() + ".csv");
+			try {
+				new MapLoader(file).load(map);
+				this.log.info("Loaded map for world" + world + " from map file.");
+			} catch (FileNotFoundException e) {
+				this.log.info("For world " + world + " exists no map file.");
+			} catch (IOException e) {
+				this.log.warning("Could not read map file for world " + world.getName() + ". Reason:" + e.getMessage());
+			}
 			this.maps.put(world, map);
 		}
 		return map;
@@ -44,33 +55,42 @@ public class CooksMapPlugin extends JavaPlugin {
 		return this.getMap(player.getWorld());
 	}
 
-	/**
-	 * Returns the height difference between target and position as int.
-	 * 
-	 * @param target
-	 * @param position
-	 * @return
-	 */
-	public static int getEvelationDifference(Location target, Location position) {
-		return target.getBlockY() - position.getBlockY();
+	public static int getDistance(int x1, int z1, int x2, int z2) {
+		return (int) Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(z1 - z2, 2));
 	}
 
-	/**
-	 * Returns the distance in the XZ-Layer between loc1 and loc2 as int.
-	 * 
-	 * @param loc1
-	 * @param loc2
-	 * @return
-	 */
-	public static int getDistance(Location loc1, Location loc2) {
-		return (int) Math.sqrt(Math.pow(loc1.getBlockX() - loc2.getBlockX(), 2)
-				+ Math.pow(loc1.getBlockZ() - loc2.getBlockZ(), 2));
+	public static int getDistance(Location position, Location target) {
+		return CooksMapPlugin.getDistance(position.getBlockX(), position.getBlockZ(), target.getBlockX(),
+				target.getBlockZ());
+	}
+
+	public static int getDistance(Location loc, Position pos) {
+		return CooksMapPlugin.getDistance(loc.getBlockX(), loc.getBlockZ(), pos.getX(), pos.getZ());
+	}
+
+	public static Location createLocation(Player player, Position position) {
+		return new Location(player.getWorld(), position.getX(), position.getY(), position.getZ());
 	}
 
 	@Override
 	public void onDisable() {
-		// TODO: save maps
+		for (World world : this.maps.keySet()) {
+			this.saveMap(world);
+		}
 		this.log.info("Plugin CooksMap has been disabled");
+	}
+
+	private void saveMap(World world) {
+		Map map = this.maps.get(world);
+		String worldName = world.getName();
+		try {
+			this.getDataFolder().mkdirs();
+			File file = new File(this.getDataFolder(), worldName + ".csv");
+			new MapSaver(file).safe(map);
+			this.log.info("Map of world " + worldName + " saved to " + file.getAbsolutePath());
+		} catch (IOException e) {
+			this.log.warning("Could not save Map for world " + worldName + ". Reason: " + e.getMessage());
+		}
 	}
 
 	@Override
@@ -131,7 +151,7 @@ public class CooksMapPlugin extends JavaPlugin {
 				}
 
 				int distance = CooksMapPlugin.getDistance(position, target);
-				int evelationDifference = CooksMapPlugin.getEvelationDifference(target, position);
+				int evelationDifference = position.getBlockY() - target.getBlockY();
 				player.sendMessage("Distance to target: " + distance + ". Evelation difference: " + evelationDifference);
 				return true;
 			}
@@ -151,6 +171,7 @@ public class CooksMapPlugin extends JavaPlugin {
 						player.sendMessage("No landmark with id " + idString + "found.");
 					} else {
 						player.sendMessage("Landmark removed.");
+						CooksMapPlugin.this.saveMap(player.getWorld());
 					}
 				} catch (NumberFormatException e) {
 					player.sendMessage("id must be an integer");
@@ -167,8 +188,9 @@ public class CooksMapPlugin extends JavaPlugin {
 			 */
 			private boolean addLandmark(Player player) {
 				Location location = player.getLocation();
-				int id = CooksMapPlugin.this.getMap(player).addLandmard(location);
+				int id = CooksMapPlugin.this.getMap(player).addLandmark(location);
 				player.sendMessage("New landmark with id " + id + " added.");
+				CooksMapPlugin.this.saveMap(player.getWorld());
 				return true;
 			}
 
@@ -187,11 +209,11 @@ public class CooksMapPlugin extends JavaPlugin {
 					if (landmark == null) {
 						player.sendMessage("No landmark with id " + idString + " found.");
 					} else {
-						Location target = landmark.getLocation();
-						player.setCompassTarget(target);
+						Position target = landmark.getPosition();
+						player.setCompassTarget(CooksMapPlugin.createLocation(player, target));
 						Location position = player.getLocation();
 						int distance = CooksMapPlugin.getDistance(position, target);
-						int evelationDifference = CooksMapPlugin.getEvelationDifference(target, position);
+						int evelationDifference = target.getY() - position.getBlockY();
 						player.sendMessage("Distance to new target: " + distance + ". Elevation difference: "
 								+ evelationDifference);
 					}

@@ -12,17 +12,21 @@ public class Map {
 		return this.landmarksById.get(new Integer(id));
 	}
 
-	public int addLandmard(Location location) {
+	public int addLandmark(Location location) {
 		this.landmarksById.put(new Integer(++this.lastId), new Landmark(location));
 		return this.lastId;
 	}
 
 	public Landmark removeLandmark(int id) {
 		return this.landmarksById.remove(new Integer(id));
-
 	}
 
 	public HashMap<Integer, Landmark> getLandmarks() {
 		return this.landmarksById;
+	}
+
+	public void addLandmark(int id, Landmark landmark) {
+		this.lastId = Math.max(id, this.lastId);
+		this.landmarksById.put(new Integer(id), landmark);
 	}
 }
