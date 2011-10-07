@@ -6,10 +6,11 @@ commands:
     cmap:
         description: Shows the Help for CooksMap.
         usage: |
-            /<command> set <id>
+            /<command> list [page]
             /<command> add <type> <name>
-            /<command> rm <id>
+            /<command> set <id>
             /<command> dist
+            /<command> rm <id>
       
 permissions:
     cmap.*:
