@@ -1,10 +1,13 @@
-package de.radicarlprogramming.minecraft.cooksmap;
+package de.radicarlprogramming.minecraft.cooksmap.persistence;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+
+import de.radicarlprogramming.minecraft.cooksmap.Landmark;
+import de.radicarlprogramming.minecraft.cooksmap.Map;
 
 public class MapSaver extends PrintWriter {
 
@@ -22,6 +25,10 @@ public class MapSaver extends PrintWriter {
 			this.print(String.valueOf(landmark.getY()));
 			this.print(";");
 			this.print(String.valueOf(landmark.getZ()));
+			this.print(";");
+			this.print(landmark.getType());
+			this.print(";");
+			this.print(landmark.getDescription());
 			this.println(";");
 		}
 		this.close();

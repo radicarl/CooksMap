@@ -1,33 +1,38 @@
-package de.radicarlprogramming.minecraft.cooksmap;
+package de.radicarlprogramming.minecraft.cooksmap.ui;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import org.bukkit.entity.Player;
 
-public class LandmarkList {
-	public static int DISPLAY_HEIGHT = 10;
+import de.radicarlprogramming.minecraft.cooksmap.Landmark;
 
+public class LandmarkList {
+	private int pages = 1;
 	private int maxLengthId = 0;
 	private int maxLengthX = 0;
 	private int maxLengthY = 0;
 	private int maxLengthZ = 0;
 
 	private final List<LandmarkListRow> rows = new ArrayList<LandmarkListRow>();
+	public final Player player;
+
+	public LandmarkList(int pages, Player player) {
+		this.pages = pages;
+		this.player = player;
+	}
 
 	public boolean addLandmarkToList(int id, Landmark landmark) {
-		if (this.rows.size() >= LandmarkList.DISPLAY_HEIGHT - 1) {
-			return false;
-		}
 		this.rows.add(new LandmarkListRow(id, landmark));
 		return true;
 	}
 
-	public void getPrintString(Player player) {
+	public void getPrintString(Player player, int page) {
 		// +4 cause of [,,]
-		String coords = " coords";
+		String coords = " coords->distance";
 		int lengthCoords = Math.max(coords.length(), this.maxLengthX + this.maxLengthY + this.maxLengthZ + 4);
-		player.sendMessage(LandmarkList.padRight(" id", this.maxLengthId) + LandmarkList.padRight(coords, lengthCoords));
+		player.sendMessage(LandmarkList.padRight(" id", this.maxLengthId) + LandmarkList.padRight(coords, lengthCoords)
+				+ " Type   Name   Page " + page + "/" + this.pages);
 		for (LandmarkListRow row : this.rows) {
 			player.sendMessage(row.getPrintString());
 		}
@@ -62,8 +67,10 @@ public class LandmarkList {
 		private final String x;
 		private final String y;
 		private final String z;
+		private final Landmark landmark;
 
 		private LandmarkListRow(int id, Landmark landmark) {
+			this.landmark = landmark;
 			this.id = String.valueOf(id);
 			this.x = String.valueOf(landmark.getX());
 			this.y = String.valueOf(landmark.getY());
@@ -72,13 +79,25 @@ public class LandmarkList {
 			LandmarkList.this.maxLengthX = Math.max(LandmarkList.this.maxLengthX, this.x.length());
 			LandmarkList.this.maxLengthY = Math.max(LandmarkList.this.maxLengthY, this.y.length());
 			LandmarkList.this.maxLengthZ = Math.max(LandmarkList.this.maxLengthZ, this.z.length());
+			LandmarkList.this.maxLengthZ = Math.max(LandmarkList.this.maxLengthZ, this.z.length());
 		}
 
 		public String getPrintString() {
-			return LandmarkList.padLeft(this.id, LandmarkList.this.maxLengthId) + " ["
-					+ LandmarkList.padLeft(this.x, LandmarkList.this.maxLengthX) + ","
-					+ LandmarkList.padLeft(this.y, LandmarkList.this.maxLengthY) + ","
-					+ LandmarkList.padLeft(this.z, LandmarkList.this.maxLengthZ) + "]";
+			boolean isVisible = this.landmark.isVisible(LandmarkList.this.player.getName());
+			StringBuffer buffer = new StringBuffer(isVisible ? "+" : "-");
+			buffer.append(LandmarkList.padLeft(this.id, LandmarkList.this.maxLengthId));
+			buffer.append(" [");
+			buffer.append(LandmarkList.padLeft(this.x, LandmarkList.this.maxLengthX));
+			buffer.append(",");
+			buffer.append(LandmarkList.padLeft(this.y, LandmarkList.this.maxLengthY));
+			buffer.append(",");
+			buffer.append(LandmarkList.padLeft(this.z, LandmarkList.this.maxLengthZ));
+			buffer.append("] ");
+			buffer.append(this.landmark.getType());
+			buffer.append(" '");
+			buffer.append(this.landmark.getDescription());
+			buffer.append("'");
+			return buffer.toString();
 		}
 	}
 }

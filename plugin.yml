@@ -7,7 +7,7 @@ commands:
         description: Shows the Help for CooksMap.
         usage: |
             /<command> list [page]
-            /<command> add <type> <name>
+            /<command> add [public] <type> <description>
             /<command> set <id>
             /<command> dist
             /<command> rm <id>
