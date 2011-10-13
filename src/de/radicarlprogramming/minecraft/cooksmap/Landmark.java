@@ -63,7 +63,7 @@ public class Landmark {
 	}
 
 	public boolean isVisible(String name) {
-		return !this.isPrivate && this.playerName.equals(name);
+		return this.playerName.equals(name) || !this.isPrivate();
 	}
 
 	public boolean isPrivate() {

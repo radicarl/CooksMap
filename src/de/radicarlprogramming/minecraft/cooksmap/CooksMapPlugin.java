@@ -4,9 +4,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
-import java.util.TreeMap;
 import java.util.logging.Logger;
 
 import org.bukkit.Location;
@@ -17,6 +16,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import de.radicarlprogramming.minecraft.cooksmap.comparator.CategoryComparator;
 import de.radicarlprogramming.minecraft.cooksmap.persistence.MapLoader;
 import de.radicarlprogramming.minecraft.cooksmap.persistence.MapSaver;
 import de.radicarlprogramming.minecraft.cooksmap.ui.LandmarkList;
@@ -63,6 +63,10 @@ public class CooksMapPlugin extends JavaPlugin {
 		return this.getMap(player.getWorld());
 	}
 
+	public static Location createLocation(Player player, Position position) {
+		return new Location(player.getWorld(), position.getX(), position.getY(), position.getZ());
+	}
+
 	public static int getDistance(int x1, int z1, int x2, int z2) {
 		return (int) Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(z1 - z2, 2));
 	}
@@ -76,8 +80,24 @@ public class CooksMapPlugin extends JavaPlugin {
 		return CooksMapPlugin.getDistance(loc.getBlockX(), loc.getBlockZ(), pos.getX(), pos.getZ());
 	}
 
-	public static Location createLocation(Player player, Position position) {
-		return new Location(player.getWorld(), position.getX(), position.getY(), position.getZ());
+	public static int getLevelDifference(int position, int target) {
+		return position - target;
+	}
+
+	public static int getLevelDifference(Position position, Location target) {
+		return CooksMapPlugin.getLevelDifference(position.getY(), target.getBlockY());
+	}
+
+	public static int getLevelDifference(Location position, Position target) {
+		return CooksMapPlugin.getLevelDifference(position.getBlockY(), target.getY());
+	}
+
+	public static int getLevelDifference(Location position, Location target) {
+		return CooksMapPlugin.getLevelDifference(position.getBlockY(), target.getBlockY());
+	}
+
+	public static int getLevelDifference(Position position, Position target) {
+		return CooksMapPlugin.getLevelDifference(position.getY(), target.getY());
 	}
 
 	@Override
@@ -151,18 +171,15 @@ public class CooksMapPlugin extends JavaPlugin {
 
 			private boolean list(Player player, int page) {
 				Map map = CooksMapPlugin.this.getMap(player);
-				// TODO: for listing, just use the player landmarks lists -> no
-				// checks for visibility necessary
-				TreeMap<Integer, Landmark> landmarks = map.getLandmarks();
-				List<Integer> ids = new ArrayList<Integer>(landmarks.keySet());
+				ArrayList<Landmark> landmarks = map.getLandmarks(player);
+				Collections.sort(map.getLandmarks(player), new CategoryComparator());
 
-				int pages = (int) (Math.ceil(ids.size() / (CooksMapPlugin.ROWS_PER_PAGE - 1.0)));
+				int pages = (int) (Math.ceil(landmarks.size() / (CooksMapPlugin.ROWS_PER_PAGE - 1.0)));
 				LandmarkList list = new LandmarkList(pages, player);
 				int offset = (page - 1) * (CooksMapPlugin.ROWS_PER_PAGE - 1);
 				int lastRow = offset + (CooksMapPlugin.ROWS_PER_PAGE - 1);
-				for (; offset < ids.size() && offset < lastRow; offset++) {
-					Integer id = ids.get(offset);
-					list.addLandmarkToList(id, landmarks.get(id));
+				for (; offset < landmarks.size() && offset < lastRow; offset++) {
+					list.addLandmarkToList(landmarks.get(offset));
 				}
 				list.getPrintString(player, page);
 				return true;
@@ -188,8 +205,8 @@ public class CooksMapPlugin extends JavaPlugin {
 				}
 
 				int distance = CooksMapPlugin.getDistance(position, target);
-				int evelationDifference = position.getBlockY() - target.getBlockY();
-				player.sendMessage("Distance to target: " + distance + ". Evelation difference: " + evelationDifference);
+				int levelDifference = CooksMapPlugin.getLevelDifference(position, target);
+				player.sendMessage("Distance to target: " + distance + ". Level difference: " + levelDifference);
 				return true;
 			}
 
@@ -255,9 +272,9 @@ public class CooksMapPlugin extends JavaPlugin {
 						player.setCompassTarget(CooksMapPlugin.createLocation(player, target));
 						Location position = player.getLocation();
 						int distance = CooksMapPlugin.getDistance(position, target);
-						int evelationDifference = target.getY() - position.getBlockY();
-						player.sendMessage("Distance to new target: " + distance + ". Elevation difference: "
-								+ evelationDifference);
+						int levelDifference = CooksMapPlugin.getLevelDifference(position, target);
+						player.sendMessage("Distance to " + landmark.getDescription() + ": " + distance + "/"
+								+ levelDifference);
 					}
 				} catch (NumberFormatException e) {
 					player.sendMessage("id must be an integer");
@@ -267,4 +284,5 @@ public class CooksMapPlugin extends JavaPlugin {
 
 		});
 	}
+
 }

@@ -3,7 +3,6 @@ package de.radicarlprogramming.minecraft.cooksmap;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map.Entry;
-import java.util.TreeMap;
 import java.util.logging.Logger;
 
 import org.bukkit.Location;
@@ -16,7 +15,7 @@ public class Map {
 	// TODO: use HashMap cause of performance, cause sorting is only needed for
 	// listing, and this will be done by using the landmarks list for the
 	// player.
-	private final TreeMap<Integer, Landmark> landmarksById = new TreeMap<Integer, Landmark>();
+	private final HashMap<Integer, Landmark> landmarksById = new HashMap<Integer, Landmark>();
 
 	/**
 	 * Contains the list of landmarks visible to the mapped player. A list for a
@@ -98,9 +97,7 @@ public class Map {
 		return landmark;
 	}
 
-	@Deprecated
-	public TreeMap<Integer, Landmark> getLandmarks() {
-		// TODO: remove this function
+	public HashMap<Integer, Landmark> getLandmarks() {
 		return this.landmarksById;
 	}
 
