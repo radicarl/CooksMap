@@ -34,9 +34,10 @@ public class LandmarkList {
 	public void getPrintString(Player player, int page) {
 		String coords = " coords->distance";
 		// +6 cause of [,,]->
+		// TODO: use [X,Y,Z] instead of coords
 		int lengthCoords = Math.max(coords.length(), this.maxLengthX + this.maxLengthY + this.maxLengthZ + 6);
 		player.sendMessage(LandmarkList.padRight(" id", this.maxLengthId) + LandmarkList.padRight(coords, lengthCoords)
-				+ " Type   Name   Page " + page + "/" + this.pages);
+				+ " Category   Description         (Page " + page + "/" + this.pages + ")");
 		for (LandmarkListRow row : this.rows) {
 			player.sendMessage(row.getPrintString());
 		}

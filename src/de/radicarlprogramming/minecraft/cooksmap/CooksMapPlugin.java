@@ -16,7 +16,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import de.radicarlprogramming.minecraft.cooksmap.comparator.CategoryComparator;
+import de.radicarlprogramming.minecraft.cooksmap.comparator.LandmarkComparator;
 import de.radicarlprogramming.minecraft.cooksmap.persistence.MapLoader;
 import de.radicarlprogramming.minecraft.cooksmap.persistence.MapSaver;
 import de.radicarlprogramming.minecraft.cooksmap.ui.LandmarkList;
@@ -118,25 +118,48 @@ public class CooksMapPlugin extends JavaPlugin {
 					} else if ("dist".equals(args[0])) {
 						return this.calculateDistance(player);
 					} else if ("list".equals(args[0])) {
-						int page = 1;
-						if (args.length > 1) {
-							try {
-								page = Integer.parseInt(args[1]);
-							} catch (NumberFormatException e) {
-								// show Page 1 if invalid number is given
-							}
-						}
-						return this.list(player, page);
+						return this.list(player, args);
 					}
 				}
 				return false;
 			}
 
-			private boolean list(Player player, int page) {
+			// TODO: implement next and prev list functions, wich use the last
+			// used search string
+
+			// TODO: implement change landmark method for
+			// description/type/visibility
+
+			private boolean list(Player player, String[] args) {
+				int page = 1;
+				LandmarkComparator firstComparator = null;
+				LandmarkComparator lastComparator = null;
+				for (String arg : args) {
+					if (arg.matches("(\\+|-).+")) {
+						LandmarkComparator comparator = LandmarkComparator.createComparator(arg);
+						if (firstComparator == null) {
+							firstComparator = comparator;
+							lastComparator = comparator;
+						} else {
+							lastComparator.setNextComparator(comparator);
+							lastComparator = comparator;
+						}
+
+					} // TODO: check for filter args
+					else {
+						try {
+							page = Integer.parseInt(arg);
+						} catch (NumberFormatException e) {
+							// stay on last set page or on page 1
+						}
+					}
+				}
+
 				Map map = CooksMapPlugin.this.getMap(player);
 				ArrayList<Landmark> landmarks = map.getLandmarks(player);
-				Collections.sort(map.getLandmarks(player), new CategoryComparator());
-
+				if (firstComparator != null) {
+					Collections.sort(map.getLandmarks(player), firstComparator);
+				}
 				int pages = (int) (Math.ceil(landmarks.size() / (CooksMapPlugin.ROWS_PER_PAGE - 1.0)));
 				LandmarkList list = new LandmarkList(pages, player);
 				int offset = (page - 1) * (CooksMapPlugin.ROWS_PER_PAGE - 1);
@@ -247,5 +270,4 @@ public class CooksMapPlugin extends JavaPlugin {
 
 		});
 	}
-
 }
