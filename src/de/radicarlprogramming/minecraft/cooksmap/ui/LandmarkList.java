@@ -34,6 +34,7 @@ public class LandmarkList {
 	public void getPrintString(Player player, int page) {
 		// +4 cause of [,,]
 		String coords = " coords->distance";
+		// TODO add padding for distance
 		int lengthCoords = Math.max(coords.length(), this.maxLengthX + this.maxLengthY + this.maxLengthZ + 4);
 		player.sendMessage(LandmarkList.padRight(" id", this.maxLengthId) + LandmarkList.padRight(coords, lengthCoords)
 				+ " Type   Name   Page " + page + "/" + this.pages);
@@ -103,6 +104,7 @@ public class LandmarkList {
 			buffer.append(",");
 			buffer.append(LandmarkList.padLeft(this.z, LandmarkList.this.maxLengthZ));
 			buffer.append("]->");
+			// TODO add padding for distance
 			buffer.append(this.distance);
 			buffer.append(" ");
 			buffer.append(this.landmark.getType());

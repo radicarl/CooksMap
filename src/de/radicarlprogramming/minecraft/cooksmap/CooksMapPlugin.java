@@ -63,10 +63,6 @@ public class CooksMapPlugin extends JavaPlugin {
 		return this.getMap(player.getWorld());
 	}
 
-	public static Location createLocation(Player player, Position position) {
-		return new Location(player.getWorld(), position.getX(), position.getY(), position.getZ());
-	}
-
 	public static int getDistance(int x1, int z1, int x2, int z2) {
 		return (int) Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(z1 - z2, 2));
 	}
@@ -269,7 +265,7 @@ public class CooksMapPlugin extends JavaPlugin {
 						player.sendMessage("You can not access the landmark with id " + idString + ".");
 					} else {
 						Position target = landmark.getPosition();
-						player.setCompassTarget(CooksMapPlugin.createLocation(player, target));
+						player.setCompassTarget(Helper.createLocation(player, target));
 						Location position = player.getLocation();
 						int distance = CooksMapPlugin.getDistance(position, target);
 						int levelDifference = CooksMapPlugin.getLevelDifference(position, target);
