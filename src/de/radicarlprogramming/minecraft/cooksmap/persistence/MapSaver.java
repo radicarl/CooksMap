@@ -26,7 +26,7 @@ public class MapSaver extends PrintWriter {
 			this.print(";");
 			this.print(String.valueOf(landmark.getZ()));
 			this.print(";");
-			this.print(landmark.getType());
+			this.print(landmark.getCategory());
 			this.print(";");
 			this.print(landmark.getDescription());
 			this.print(";");

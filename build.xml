@@ -1,0 +1,27 @@
+<project name="CooksMap" default="jar" basedir=".">
+	<property file="build.properties" />
+	<property name="jar.filename" value="CooksMap.jar" />
+	
+	<path id="classpath">
+		 <pathelement location="${bukkit.jar}"/>
+	</path>
+
+	<target name="init">
+		<mkdir dir="${dir.bin}" />
+	</target>
+
+	<target name="compile" depends="init" description="compile the source ">
+		<javac srcdir="${dir.src}" destdir="${dir.bin}" classpathref="classpath" includeantruntime="false"/>
+	</target>
+
+	<target name="jar" depends="compile" description="generate the distribution">
+		<copy file="plugin.yml" todir="${dir.bin}"/>
+		<jar jarfile="${dir.jar.destination}/${jar.filename}" basedir="${dir.bin}"/>
+	</target>
+
+	<target name="clean" description="clean up">
+		<delete dir="${dir.bin}" />
+	</target>
+
+
+</project>

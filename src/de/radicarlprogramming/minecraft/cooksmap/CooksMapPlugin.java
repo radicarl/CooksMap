@@ -63,39 +63,6 @@ public class CooksMapPlugin extends JavaPlugin {
 		return this.getMap(player.getWorld());
 	}
 
-	public static int getDistance(int x1, int z1, int x2, int z2) {
-		return (int) Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(z1 - z2, 2));
-	}
-
-	public static int getDistance(Location position, Location target) {
-		return CooksMapPlugin.getDistance(position.getBlockX(), position.getBlockZ(), target.getBlockX(),
-				target.getBlockZ());
-	}
-
-	public static int getDistance(Location loc, Position pos) {
-		return CooksMapPlugin.getDistance(loc.getBlockX(), loc.getBlockZ(), pos.getX(), pos.getZ());
-	}
-
-	public static int getLevelDifference(int position, int target) {
-		return position - target;
-	}
-
-	public static int getLevelDifference(Position position, Location target) {
-		return CooksMapPlugin.getLevelDifference(position.getY(), target.getBlockY());
-	}
-
-	public static int getLevelDifference(Location position, Position target) {
-		return CooksMapPlugin.getLevelDifference(position.getBlockY(), target.getY());
-	}
-
-	public static int getLevelDifference(Location position, Location target) {
-		return CooksMapPlugin.getLevelDifference(position.getBlockY(), target.getBlockY());
-	}
-
-	public static int getLevelDifference(Position position, Position target) {
-		return CooksMapPlugin.getLevelDifference(position.getY(), target.getY());
-	}
-
 	@Override
 	public void onDisable() {
 		for (World world : this.maps.keySet()) {
@@ -200,8 +167,8 @@ public class CooksMapPlugin extends JavaPlugin {
 					return true;
 				}
 
-				int distance = CooksMapPlugin.getDistance(position, target);
-				int levelDifference = CooksMapPlugin.getLevelDifference(position, target);
+				int distance = Helper.getDistance(position, target);
+				int levelDifference = Helper.getLevelDifference(position, target);
 				player.sendMessage("Distance to target: " + distance + ". Level difference: " + levelDifference);
 				return true;
 			}
@@ -267,8 +234,8 @@ public class CooksMapPlugin extends JavaPlugin {
 						Position target = landmark.getPosition();
 						player.setCompassTarget(Helper.createLocation(player, target));
 						Location position = player.getLocation();
-						int distance = CooksMapPlugin.getDistance(position, target);
-						int levelDifference = CooksMapPlugin.getLevelDifference(position, target);
+						int distance = Helper.getDistance(position, target);
+						int levelDifference = Helper.getLevelDifference(position, target);
 						player.sendMessage("Distance to " + landmark.getDescription() + ": " + distance + "/"
 								+ levelDifference);
 					}

@@ -7,7 +7,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
-import de.radicarlprogramming.minecraft.cooksmap.CooksMapPlugin;
+import de.radicarlprogramming.minecraft.cooksmap.Helper;
 import de.radicarlprogramming.minecraft.cooksmap.Landmark;
 import de.radicarlprogramming.minecraft.cooksmap.Position;
 
@@ -32,10 +32,9 @@ public class LandmarkList {
 	}
 
 	public void getPrintString(Player player, int page) {
-		// +4 cause of [,,]
 		String coords = " coords->distance";
-		// TODO add padding for distance
-		int lengthCoords = Math.max(coords.length(), this.maxLengthX + this.maxLengthY + this.maxLengthZ + 4);
+		// +6 cause of [,,]->
+		int lengthCoords = Math.max(coords.length(), this.maxLengthX + this.maxLengthY + this.maxLengthZ + 6);
 		player.sendMessage(LandmarkList.padRight(" id", this.maxLengthId) + LandmarkList.padRight(coords, lengthCoords)
 				+ " Type   Name   Page " + page + "/" + this.pages);
 		for (LandmarkListRow row : this.rows) {
@@ -83,7 +82,7 @@ public class LandmarkList {
 			this.z = String.valueOf(landmark.getZ());
 			Location location = LandmarkList.this.player.getLocation();
 			Position position = this.landmark.getPosition();
-			this.distance = String.valueOf(CooksMapPlugin.getDistance(location, position));
+			this.distance = String.valueOf(Helper.getDistance(location, position));
 
 			LandmarkList.this.maxLengthId = Math.max(LandmarkList.this.maxLengthId, this.id.length());
 			LandmarkList.this.maxLengthX = Math.max(LandmarkList.this.maxLengthX, this.x.length());
@@ -104,10 +103,9 @@ public class LandmarkList {
 			buffer.append(",");
 			buffer.append(LandmarkList.padLeft(this.z, LandmarkList.this.maxLengthZ));
 			buffer.append("]->");
-			// TODO add padding for distance
-			buffer.append(this.distance);
+			buffer.append(LandmarkList.padLeft(this.distance, LandmarkList.this.maxLengthDistance));
 			buffer.append(" ");
-			buffer.append(this.landmark.getType());
+			buffer.append(this.landmark.getCategory());
 			buffer.append(" '");
 			buffer.append(this.landmark.getDescription());
 			buffer.append("'");

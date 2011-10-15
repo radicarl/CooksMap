@@ -6,8 +6,7 @@ public class Landmark {
 
 	private final int id;
 	private final Position position;
-	// TODO: rename to category
-	private final String type;
+	private final String category;
 	private final String description;
 	private final boolean isPrivate;
 	private final String playerName;
@@ -15,7 +14,7 @@ public class Landmark {
 	public Landmark(Location location, int id, String type, String description, String playerName, boolean isPrivate) {
 		this.id = id;
 		this.position = new Position(location);
-		this.type = type;
+		this.category = type;
 		this.description = description;
 		this.playerName = playerName;
 		this.isPrivate = isPrivate;
@@ -24,7 +23,7 @@ public class Landmark {
 	public Landmark(int x, int y, int z, int id, String type, String description, String playerName, boolean isPrivate) {
 		this.id = id;
 		this.position = new Position(x, y, z);
-		this.type = type;
+		this.category = type;
 		this.description = description;
 		this.isPrivate = isPrivate;
 		this.playerName = playerName;
@@ -50,8 +49,8 @@ public class Landmark {
 		return this.position.getZ();
 	}
 
-	public String getType() {
-		return this.type;
+	public String getCategory() {
+		return this.category;
 	}
 
 	public String getDescription() {

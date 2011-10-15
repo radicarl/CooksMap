@@ -1,0 +1,4 @@
+dir.jar.destination = /path/to/plugin/folder
+dir.bin = classes
+dir.src = src
+bukkit.jar = /path/to/bukkit-0.0.1-SNAPSHOT.jar
