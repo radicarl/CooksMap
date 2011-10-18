@@ -12,9 +12,6 @@ public class Map {
 	/**
 	 * Contains all landmarks mapped to their ids.
 	 */
-	// TODO: use HashMap cause of performance, cause sorting is only needed for
-	// listing, and this will be done by using the landmarks list for the
-	// player.
 	private final HashMap<Integer, Landmark> landmarksById = new HashMap<Integer, Landmark>();
 
 	/**
@@ -47,9 +44,9 @@ public class Map {
 	 *            , true if everybody can see the new landmark
 	 * @return id of the added landmark
 	 */
-	public int addLandmark(Location location, String type, String description, Player player, boolean isPublic) {
+	public int addNewLandmark(Location location, String type, String description, Player player, boolean isPublic) {
 		Landmark landmark = new Landmark(location, ++this.lastId, type, description, player.getName(), isPublic);
-		this.landmarksById.put(new Integer(landmark.getId()), landmark);
+		this.landmarksById.put(landmark.getId(), landmark);
 		this.add2PlayersLists(landmark);
 		return this.lastId;
 	}
@@ -108,7 +105,7 @@ public class Map {
 	 * @param landmark
 	 */
 	public int addLandmark(Landmark landmark) {
-		Integer id = new Integer(landmark.getId());
+		Integer id = landmark.getId();
 		if (!this.landmarksById.containsKey(id)) {
 			this.landmarksById.put(id, landmark);
 			this.lastId = Math.max(id, this.lastId);

@@ -1,36 +1,38 @@
 package de.radicarlprogramming.minecraft.cooksmap;
 
 import org.bukkit.Location;
+import org.bukkit.entity.Player;
 
 public class Landmark {
 
-	private final int id;
+	private final Integer id;
 	private final Position position;
 	private final String category;
 	private final String description;
 	private final boolean isPrivate;
 	private final String playerName;
 
-	public Landmark(Location location, int id, String type, String description, String playerName, boolean isPrivate) {
+	public Landmark(Location location, int id, String category, String description, String playerName, boolean isPrivate) {
 		this.id = id;
 		this.position = new Position(location);
-		this.category = type;
+		this.category = category.toLowerCase();
 		this.description = description;
 		this.playerName = playerName;
 		this.isPrivate = isPrivate;
 	}
 
-	public Landmark(int x, int y, int z, int id, String type, String description, String playerName, boolean isPrivate) {
+	public Landmark(int x, int y, int z, int id, String category, String description, String playerName,
+			boolean isPrivate) {
 		this.id = id;
 		this.position = new Position(x, y, z);
-		this.category = type;
+		this.category = category.toLowerCase();
 		this.description = description;
 		this.isPrivate = isPrivate;
 		this.playerName = playerName;
 	}
 
-	public int getId() {
-		return this.id;
+	public Integer getId() {
+		return new Integer(this.id);
 	}
 
 	public Position getPosition() {
@@ -67,5 +69,9 @@ public class Landmark {
 
 	public boolean isPrivate() {
 		return this.isPrivate;
+	}
+
+	public Distance getDistance(Player player) {
+		return Distance.calculateDistance(player, this);
 	}
 }

@@ -3,9 +3,9 @@ package de.radicarlprogramming.minecraft.cooksmap;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.logging.Logger;
 
 import org.bukkit.Location;
@@ -14,16 +14,25 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Event;
+import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import de.radicarlprogramming.minecraft.cooksmap.comparator.LandmarkComparator;
+import de.radicarlprogramming.minecraft.cooksmap.listener.DeathListener;
+import de.radicarlprogramming.minecraft.cooksmap.listener.RespawnListener;
 import de.radicarlprogramming.minecraft.cooksmap.persistence.MapLoader;
 import de.radicarlprogramming.minecraft.cooksmap.persistence.MapSaver;
 import de.radicarlprogramming.minecraft.cooksmap.ui.LandmarkList;
+import de.radicarlprogramming.minecraft.cooksmap.util.Filter;
+import de.radicarlprogramming.minecraft.cooksmap.util.InvalidFilterException;
+import de.radicarlprogramming.minecraft.cooksmap.util.LandmarkFilterer;
 
 public class CooksMapPlugin extends JavaPlugin {
 	Logger log = Logger.getLogger("Minecraft");
 	private final HashMap<World, Map> maps = new HashMap<World, Map>();
+	private final DeathListener deathListener = new DeathListener(this);
+	private final RespawnListener respawnListener = new RespawnListener();
 	public static int ROWS_PER_PAGE = 10;
 
 	/**
@@ -58,7 +67,7 @@ public class CooksMapPlugin extends JavaPlugin {
 	 * @param player
 	 * @return Map map
 	 */
-	private Map getMap(Player player) {
+	public Map getMap(Player player) {
 		// TODO: what if world is null? can it be?
 		return this.getMap(player.getWorld());
 	}
@@ -87,6 +96,9 @@ public class CooksMapPlugin extends JavaPlugin {
 	@Override
 	public void onEnable() {
 		this.log.info("Plugin CooksMap has been enabled");
+		PluginManager pluginManager = this.getServer().getPluginManager();
+		pluginManager.registerEvent(Event.Type.ENTITY_DEATH, this.deathListener, Event.Priority.Normal, this);
+		pluginManager.registerEvent(Event.Type.PLAYER_RESPAWN, this.respawnListener, Event.Priority.Normal, this);
 		this.getCommand("cmap").setExecutor(new CommandExecutor() {
 
 			@Override
@@ -134,9 +146,11 @@ public class CooksMapPlugin extends JavaPlugin {
 				int page = 1;
 				LandmarkComparator firstComparator = null;
 				LandmarkComparator lastComparator = null;
-				for (String arg : args) {
+				LandmarkFilterer filterer = new LandmarkFilterer();
+				for (int i = 1; i < args.length; i++) {
+					String arg = args[i];
 					if (arg.matches("(\\+|-).+")) {
-						LandmarkComparator comparator = LandmarkComparator.createComparator(arg);
+						LandmarkComparator comparator = LandmarkComparator.createComparator(arg, player);
 						if (firstComparator == null) {
 							firstComparator = comparator;
 							lastComparator = comparator;
@@ -145,18 +159,26 @@ public class CooksMapPlugin extends JavaPlugin {
 							lastComparator = comparator;
 						}
 
-					} // TODO: check for filter args
-					else {
+					} else {
 						try {
 							page = Integer.parseInt(arg);
 						} catch (NumberFormatException e) {
-							// stay on last set page or on page 1
+							// stay on last set page or on page 1 and try if arg
+							// is a filter
+							try {
+								filterer.addFilter(new Filter(arg, player));
+							} catch (InvalidFilterException e1) {
+								CooksMapPlugin.this.log.warning(e1.getMessage());
+							} catch (NoSuchMethodException e2) {
+								CooksMapPlugin.this.log.warning("Invalid filter colum in " + arg);
+							}
 						}
 					}
 				}
 
 				Map map = CooksMapPlugin.this.getMap(player);
-				ArrayList<Landmark> landmarks = map.getLandmarks(player);
+				// TODO save filter and list for reuse?
+				List<Landmark> landmarks = filterer.filter(map.getLandmarks(player));
 				if (firstComparator != null) {
 					Collections.sort(map.getLandmarks(player), firstComparator);
 				}
@@ -190,9 +212,8 @@ public class CooksMapPlugin extends JavaPlugin {
 					return true;
 				}
 
-				int distance = Helper.getDistance(position, target);
-				int levelDifference = Helper.getLevelDifference(position, target);
-				player.sendMessage("Distance to target: " + distance + ". Level difference: " + levelDifference);
+				Distance distance = Distance.calculateDistance(position, target);
+				player.sendMessage(distance.toString());
 				return true;
 			}
 
@@ -231,7 +252,7 @@ public class CooksMapPlugin extends JavaPlugin {
 				Location location = player.getLocation();
 				type = type.replaceAll(";", ",");
 				type = type.replaceAll("(\n|\r)+", " ");
-				int id = CooksMapPlugin.this.getMap(player).addLandmark(location, type, name, player, isPublic);
+				int id = CooksMapPlugin.this.getMap(player).addNewLandmark(location, type, name, player, isPublic);
 				player.sendMessage("New landmark with id " + id + " added.");
 				CooksMapPlugin.this.saveMap(player.getWorld());
 				return true;
@@ -246,6 +267,7 @@ public class CooksMapPlugin extends JavaPlugin {
 			 * @return
 			 */
 			private boolean setLandmark(Player player, String idString) {
+				// TODO: set by description, if more then one matches, show list
 				try {
 					int id = Integer.parseInt(idString);
 					Landmark landmark = CooksMapPlugin.this.getMap(player).getLandmark(id);
@@ -255,12 +277,10 @@ public class CooksMapPlugin extends JavaPlugin {
 						player.sendMessage("You can not access the landmark with id " + idString + ".");
 					} else {
 						Position target = landmark.getPosition();
-						player.setCompassTarget(Helper.createLocation(player, target));
-						Location position = player.getLocation();
-						int distance = Helper.getDistance(position, target);
-						int levelDifference = Helper.getLevelDifference(position, target);
-						player.sendMessage("Distance to " + landmark.getDescription() + ": " + distance + "/"
-								+ levelDifference);
+						player.setCompassTarget(new Location(player.getWorld(), target.getX(), target.getY(), target
+								.getZ()));
+						Distance distance = Distance.calculateDistance(player, landmark);
+						player.sendMessage("New Target: " + landmark.getDescription() + ". " + distance);
 					}
 				} catch (NumberFormatException e) {
 					player.sendMessage("id must be an integer");

@@ -4,12 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.bukkit.ChatColor;
-import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
-import de.radicarlprogramming.minecraft.cooksmap.Helper;
+import de.radicarlprogramming.minecraft.cooksmap.Distance;
 import de.radicarlprogramming.minecraft.cooksmap.Landmark;
-import de.radicarlprogramming.minecraft.cooksmap.Position;
 
 public class LandmarkList {
 	private int pages = 1;
@@ -18,6 +16,7 @@ public class LandmarkList {
 	private int maxLengthY = 0;
 	private int maxLengthZ = 0;
 	private int maxLengthDistance = 0;
+	private int maxLengthLevelDifference;
 
 	private final List<LandmarkListRow> rows = new ArrayList<LandmarkListRow>();
 	public final Player player;
@@ -32,9 +31,8 @@ public class LandmarkList {
 	}
 
 	public void getPrintString(Player player, int page) {
-		String coords = " coords->distance";
+		String coords = " [X,Y,Z]->distance";
 		// +6 cause of [,,]->
-		// TODO: use [X,Y,Z] instead of coords
 		int lengthCoords = Math.max(coords.length(), this.maxLengthX + this.maxLengthY + this.maxLengthZ + 6);
 		player.sendMessage(LandmarkList.padRight(" id", this.maxLengthId) + LandmarkList.padRight(coords, lengthCoords)
 				+ " Category   Description         (Page " + page + "/" + this.pages + ")");
@@ -74,16 +72,17 @@ public class LandmarkList {
 		private final String z;
 		private final String distance;
 		private final Landmark landmark;
+		private final String levelDifference;
 
 		private LandmarkListRow(Landmark landmark) {
 			this.landmark = landmark;
-			this.id = String.valueOf(landmark.getId());
+			this.id = String.valueOf(landmark.getId().intValue());
 			this.x = String.valueOf(landmark.getX());
 			this.y = String.valueOf(landmark.getY());
 			this.z = String.valueOf(landmark.getZ());
-			Location location = LandmarkList.this.player.getLocation();
-			Position position = this.landmark.getPosition();
-			this.distance = String.valueOf(Helper.getDistance(location, position));
+			Distance distance = Distance.calculateDistance(LandmarkList.this.player, landmark);
+			this.distance = String.valueOf(distance.getDistance());
+			this.levelDifference = String.valueOf(distance.getLevelDifference());
 
 			LandmarkList.this.maxLengthId = Math.max(LandmarkList.this.maxLengthId, this.id.length());
 			LandmarkList.this.maxLengthX = Math.max(LandmarkList.this.maxLengthX, this.x.length());
@@ -91,6 +90,8 @@ public class LandmarkList {
 			LandmarkList.this.maxLengthZ = Math.max(LandmarkList.this.maxLengthZ, this.z.length());
 			LandmarkList.this.maxLengthZ = Math.max(LandmarkList.this.maxLengthZ, this.z.length());
 			LandmarkList.this.maxLengthDistance = Math.max(LandmarkList.this.maxLengthDistance, this.distance.length());
+			LandmarkList.this.maxLengthLevelDifference = Math.max(LandmarkList.this.maxLengthLevelDifference,
+					this.levelDifference.length());
 		}
 
 		public String getPrintString() {
@@ -105,9 +106,12 @@ public class LandmarkList {
 			buffer.append(LandmarkList.padLeft(this.z, LandmarkList.this.maxLengthZ));
 			buffer.append("]->");
 			buffer.append(LandmarkList.padLeft(this.distance, LandmarkList.this.maxLengthDistance));
+			buffer.append("/");
+			buffer.append(LandmarkList.padLeft(this.levelDifference, LandmarkList.this.maxLengthLevelDifference));
 			buffer.append(" ");
 			buffer.append(this.landmark.getCategory());
 			buffer.append(" '");
+			// TODO: calc max rowlength and shorten description if longer
 			buffer.append(this.landmark.getDescription());
 			buffer.append("'");
 			return buffer.toString();

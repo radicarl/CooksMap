@@ -2,6 +2,8 @@ package de.radicarlprogramming.minecraft.cooksmap.comparator;
 
 import java.util.Comparator;
 
+import org.bukkit.entity.Player;
+
 import de.radicarlprogramming.minecraft.cooksmap.Landmark;
 
 public abstract class LandmarkComparator implements Comparator<Landmark> {
@@ -35,7 +37,8 @@ public abstract class LandmarkComparator implements Comparator<Landmark> {
 
 	}
 
-	public static LandmarkComparator createComparator(String arg) {
+	// TODO: use Reflections instead of hardcoded classes
+	public static LandmarkComparator createComparator(String arg, Player player) {
 		boolean sortAscending = arg.startsWith("+");
 		String type = arg.substring(1).toLowerCase();
 		LandmarkComparator comparator = null;
@@ -43,10 +46,9 @@ public abstract class LandmarkComparator implements Comparator<Landmark> {
 			comparator = new CategoryComparator(sortAscending);
 		} else if ("description".equals(type)) {
 			comparator = new DescriptionComparator(sortAscending);
-		} // TODO implement distance comparator. Calculate the distance in the
-			// comparator, or save it in the landmark and use a dirty-bit which
-			// is update by onmove events of the player
-		else {
+		} else if ("distance".equals(type)) {
+			comparator = new DistanceComparator(player, sortAscending);
+		} else {
 			comparator = new IdComparator(sortAscending);
 		}
 		return comparator;
