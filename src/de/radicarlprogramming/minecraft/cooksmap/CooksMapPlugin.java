@@ -17,23 +17,29 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
+import org.bukkit.event.Listener;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import de.radicarlprogramming.minecraft.cooksmap.comparator.LandmarkComparator;
 import de.radicarlprogramming.minecraft.cooksmap.listener.DeathListener;
+import de.radicarlprogramming.minecraft.cooksmap.listener.RespawnListener;
 import de.radicarlprogramming.minecraft.cooksmap.persistence.MapLoader;
 import de.radicarlprogramming.minecraft.cooksmap.persistence.MapSaver;
-import de.radicarlprogramming.minecraft.cooksmap.ui.LandmarkList;
+import de.radicarlprogramming.minecraft.cooksmap.ui.LandmarkTable;
 import de.radicarlprogramming.minecraft.cooksmap.util.Filter;
 import de.radicarlprogramming.minecraft.cooksmap.util.InvalidFilterException;
 import de.radicarlprogramming.minecraft.cooksmap.util.LandmarkFilterer;
 
+// TODO: test multiworld capability
+// TODO: junit tests, how to mock World, Player, tests eventlistner?
 public class CooksMapPlugin extends JavaPlugin {
 	Logger log = Logger.getLogger("Minecraft");
 	private final HashMap<World, Map> maps = new HashMap<World, Map>();
 	private final DeathListener deathListener = new DeathListener(this);
 	private final HashMap<Player, Location> deathLocations = new HashMap<Player, Location>();
+	private final Listener respawnListener = new RespawnListener();
+	private final HashMap<Player, CooksMapSession> sessions = new HashMap<Player, CooksMapSession>();
 	public static int ROWS_PER_PAGE = 10;
 
 	/**
@@ -73,6 +79,15 @@ public class CooksMapPlugin extends JavaPlugin {
 		return this.getMap(player.getWorld());
 	}
 
+	private CooksMapSession getSession(Player player) {
+		CooksMapSession session = this.sessions.get(player);
+		if (session == null) {
+			session = new CooksMapSession();
+			this.sessions.put(player, session);
+		}
+		return session;
+	}
+
 	@Override
 	public void onDisable() {
 		for (World world : this.maps.keySet()) {
@@ -99,6 +114,7 @@ public class CooksMapPlugin extends JavaPlugin {
 		this.log.info("Plugin CooksMap has been enabled");
 		PluginManager pluginManager = this.getServer().getPluginManager();
 		pluginManager.registerEvent(Event.Type.ENTITY_DEATH, this.deathListener, Event.Priority.Monitor, this);
+		pluginManager.registerEvent(Event.Type.PLAYER_RESPAWN, this.respawnListener, Event.Priority.Normal, this);
 		this.getCommand("cmap").setExecutor(new CommandExecutor() {
 			private static final String REGEX = "( category=(\\w*)| description=([^=]*)| visibility=([\\+\\-])|())+";
 			private static final int INDEX_CATEGORY = 2;
@@ -110,25 +126,38 @@ public class CooksMapPlugin extends JavaPlugin {
 			public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
 				if (args.length > 0 && sender instanceof Player) {
 					Player player = (Player) sender;
-					if ("add".equals(args[0]) && args.length > 2) {
+					if ("add".equalsIgnoreCase(args[0]) && args.length > 2) {
 						return this.addLandmark(player, args);
-					} else if ("set".equals(args[0]) && args.length > 1) {
+					} else if ("set".equalsIgnoreCase(args[0]) && args.length > 1) {
 						return this.setLandmark(player, args[1]);
-					} else if ("rm".equals(args[0]) && args.length > 1) {
+					} else if ("rm".equalsIgnoreCase(args[0]) && args.length > 1) {
 						return this.removeLandmark(player, args[1]);
-					} else if ("dist".equals(args[0])) {
+					} else if ("dist".equalsIgnoreCase(args[0])) {
 						return this.calculateDistance(player);
-					} else if ("list".equals(args[0])) {
+					} else if ("list".equalsIgnoreCase(args[0])) {
 						return this.list(player, args);
-					} else if ("edit".equals(args[0]) && args.length > 2) {
+					} else if ("edit".equalsIgnoreCase(args[0]) && args.length > 2) {
 						return this.editLandmark(player, args);
+					} else if ("next".equalsIgnoreCase(args[0])) {
+						return this.listNextPage(player);
+					} else if ("prev".equalsIgnoreCase(args[0])) {
+						return this.listPreviousPage(player);
+
 					}
 				}
 				return false;
 			}
 
-			// TODO: implement next and prev list functions, wich use the last
-			// used search string
+			private boolean listNextPage(Player player) {
+				CooksMapSession session = CooksMapPlugin.this.getSession(player);
+				return this.displayList(player, session.getPage() + 1, session.getLandmarkList());
+			}
+
+			private boolean listPreviousPage(Player player) {
+				CooksMapSession session = CooksMapPlugin.this.getSession(player);
+				int page = Math.max(1, session.getPage() - 1);
+				return this.displayList(player, page, session.getLandmarkList());
+			}
 
 			private boolean editLandmark(Player player, String[] args) {
 				try {
@@ -148,9 +177,13 @@ public class CooksMapPlugin extends JavaPlugin {
 					}
 					Matcher matcher = this.pattern.matcher(arguments);
 					if (matcher.matches()) {
+						// TODO: if visibility has changed, update all lists
+						// (map and session)
+						// TODO: let map do the change for easier listener calls
 						landmark.setVisibility(matcher.group(INDEX_VISIBILITY));
 						landmark.setDescription(matcher.group(INDEX_DESCRIPTION));
 						landmark.setCategory(matcher.group(INDEX_CATEGORY));
+						CooksMapPlugin.this.saveMap(player.getWorld());
 					}
 					// TODO: feedback
 				} catch (NumberFormatException e) {
@@ -194,19 +227,27 @@ public class CooksMapPlugin extends JavaPlugin {
 				}
 
 				Map map = CooksMapPlugin.this.getMap(player);
-				// TODO save filter and list for reuse?
 				List<Landmark> landmarks = filterer.filter(map.getLandmarks(player));
 				if (firstComparator != null) {
 					Collections.sort(map.getLandmarks(player), firstComparator);
 				}
+
+				CooksMapSession session = CooksMapPlugin.this.getSession(player);
+				session.setLandmarkList(landmarks);
+				session.setPage(page);
+
+				return this.displayList(player, page, landmarks);
+			}
+
+			private boolean displayList(Player player, int page, List<Landmark> landmarks) {
 				int pages = (int) (Math.ceil(landmarks.size() / (CooksMapPlugin.ROWS_PER_PAGE - 1.0)));
-				LandmarkList list = new LandmarkList(pages, player);
+				LandmarkTable table = new LandmarkTable(pages, player);
 				int offset = (page - 1) * (CooksMapPlugin.ROWS_PER_PAGE - 1);
 				int lastRow = offset + (CooksMapPlugin.ROWS_PER_PAGE - 1);
 				for (; offset < landmarks.size() && offset < lastRow; offset++) {
-					list.addLandmarkToList(landmarks.get(offset));
+					table.addLandmarkToList(landmarks.get(offset));
 				}
-				list.getPrintString(player, page);
+				table.getPrintString(player, page);
 				return true;
 			}
 

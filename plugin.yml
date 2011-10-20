@@ -7,6 +7,8 @@ commands:
         description: Shows the Help for CooksMap.
         usage: |
             /<command> list [page]
+            /<command> next
+            /<command> prev
             /<command> add [public] <type> <description>
             /<command> set <id>
             /<command> dist
@@ -21,6 +23,8 @@ permissions:
             cmap.set: true
             cmap.add: true
             cmap.list: true
+            cmap.next: true
+            cmap.prev: true
             cmap.rm: true
             cmap.dist: true
             cmap.edit: true
@@ -32,6 +36,12 @@ permissions:
         default: true   
     cmap.list:
         description: Allows player to list all landmarks
+        default: true 
+    cmap.next:
+        description: Allows player to see next page of his last search
+        default: true 
+    cmap.prev:
+        description: Allows player to see previous page of his last search
         default: true 
     cmap.rm:
         description: Allows player to remove own landmarks

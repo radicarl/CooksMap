@@ -9,7 +9,7 @@ import org.bukkit.entity.Player;
 import de.radicarlprogramming.minecraft.cooksmap.Distance;
 import de.radicarlprogramming.minecraft.cooksmap.Landmark;
 
-public class LandmarkList {
+public class LandmarkTable {
 	private int pages = 1;
 	private int maxLengthId = 0;
 	private int maxLengthX = 0;
@@ -18,35 +18,35 @@ public class LandmarkList {
 	private int maxLengthDistance = 0;
 	private int maxLengthLevelDifference;
 
-	private final List<LandmarkListRow> rows = new ArrayList<LandmarkListRow>();
+	private final List<LandmarkTabletRow> rows = new ArrayList<LandmarkTabletRow>();
 	public final Player player;
 
-	public LandmarkList(int pages, Player player) {
+	public LandmarkTable(int pages, Player player) {
 		this.pages = pages;
 		this.player = player;
 	}
 
 	public void addLandmarkToList(Landmark landmark) {
-		this.rows.add(new LandmarkListRow(landmark));
+		this.rows.add(new LandmarkTabletRow(landmark));
 	}
 
 	public void getPrintString(Player player, int page) {
 		String coords = " [X,Y,Z]->distance";
 		// +6 cause of [,,]->
 		int lengthCoords = Math.max(coords.length(), this.maxLengthX + this.maxLengthY + this.maxLengthZ + 6);
-		player.sendMessage(LandmarkList.padRight(" id", this.maxLengthId) + LandmarkList.padRight(coords, lengthCoords)
+		player.sendMessage(LandmarkTable.padRight(" id", this.maxLengthId) + LandmarkTable.padRight(coords, lengthCoords)
 				+ " Category   Description         (Page " + page + "/" + this.pages + ")");
-		for (LandmarkListRow row : this.rows) {
+		for (LandmarkTabletRow row : this.rows) {
 			player.sendMessage(row.getPrintString());
 		}
 	}
 
 	private static String padRight(String string, int length) {
-		return LandmarkList.pad(string, length, false);
+		return LandmarkTable.pad(string, length, false);
 	}
 
 	private static String padLeft(String string, int length) {
-		return LandmarkList.pad(string, length, true);
+		return LandmarkTable.pad(string, length, true);
 	}
 
 	private static String pad(String string, int length, boolean left) {
@@ -65,7 +65,7 @@ public class LandmarkList {
 		return string + String.valueOf(padding);
 	}
 
-	private class LandmarkListRow {
+	private class LandmarkTabletRow {
 		private final String id;
 		private final String x;
 		private final String y;
@@ -74,40 +74,40 @@ public class LandmarkList {
 		private final Landmark landmark;
 		private final String levelDifference;
 
-		private LandmarkListRow(Landmark landmark) {
+		private LandmarkTabletRow(Landmark landmark) {
 			this.landmark = landmark;
 			this.id = String.valueOf(landmark.getId().intValue());
 			this.x = String.valueOf(landmark.getX());
 			this.y = String.valueOf(landmark.getY());
 			this.z = String.valueOf(landmark.getZ());
-			Distance distance = Distance.calculateDistance(LandmarkList.this.player, landmark);
+			Distance distance = Distance.calculateDistance(LandmarkTable.this.player, landmark);
 			this.distance = String.valueOf(distance.getDistance());
 			this.levelDifference = String.valueOf(distance.getLevelDifference());
 
-			LandmarkList.this.maxLengthId = Math.max(LandmarkList.this.maxLengthId, this.id.length());
-			LandmarkList.this.maxLengthX = Math.max(LandmarkList.this.maxLengthX, this.x.length());
-			LandmarkList.this.maxLengthY = Math.max(LandmarkList.this.maxLengthY, this.y.length());
-			LandmarkList.this.maxLengthZ = Math.max(LandmarkList.this.maxLengthZ, this.z.length());
-			LandmarkList.this.maxLengthZ = Math.max(LandmarkList.this.maxLengthZ, this.z.length());
-			LandmarkList.this.maxLengthDistance = Math.max(LandmarkList.this.maxLengthDistance, this.distance.length());
-			LandmarkList.this.maxLengthLevelDifference = Math.max(LandmarkList.this.maxLengthLevelDifference,
+			LandmarkTable.this.maxLengthId = Math.max(LandmarkTable.this.maxLengthId, this.id.length());
+			LandmarkTable.this.maxLengthX = Math.max(LandmarkTable.this.maxLengthX, this.x.length());
+			LandmarkTable.this.maxLengthY = Math.max(LandmarkTable.this.maxLengthY, this.y.length());
+			LandmarkTable.this.maxLengthZ = Math.max(LandmarkTable.this.maxLengthZ, this.z.length());
+			LandmarkTable.this.maxLengthZ = Math.max(LandmarkTable.this.maxLengthZ, this.z.length());
+			LandmarkTable.this.maxLengthDistance = Math.max(LandmarkTable.this.maxLengthDistance, this.distance.length());
+			LandmarkTable.this.maxLengthLevelDifference = Math.max(LandmarkTable.this.maxLengthLevelDifference,
 					this.levelDifference.length());
 		}
 
 		public String getPrintString() {
 			StringBuffer buffer = new StringBuffer((this.landmark.isPrivate()) ? ChatColor.DARK_RED.toString()
 					: ChatColor.DARK_GREEN.toString());
-			buffer.append(LandmarkList.padLeft(this.id, LandmarkList.this.maxLengthId));
+			buffer.append(LandmarkTable.padLeft(this.id, LandmarkTable.this.maxLengthId));
 			buffer.append(" [");
-			buffer.append(LandmarkList.padLeft(this.x, LandmarkList.this.maxLengthX));
+			buffer.append(LandmarkTable.padLeft(this.x, LandmarkTable.this.maxLengthX));
 			buffer.append(",");
-			buffer.append(LandmarkList.padLeft(this.y, LandmarkList.this.maxLengthY));
+			buffer.append(LandmarkTable.padLeft(this.y, LandmarkTable.this.maxLengthY));
 			buffer.append(",");
-			buffer.append(LandmarkList.padLeft(this.z, LandmarkList.this.maxLengthZ));
+			buffer.append(LandmarkTable.padLeft(this.z, LandmarkTable.this.maxLengthZ));
 			buffer.append("]->");
-			buffer.append(LandmarkList.padLeft(this.distance, LandmarkList.this.maxLengthDistance));
+			buffer.append(LandmarkTable.padLeft(this.distance, LandmarkTable.this.maxLengthDistance));
 			buffer.append("/");
-			buffer.append(LandmarkList.padLeft(this.levelDifference, LandmarkList.this.maxLengthLevelDifference));
+			buffer.append(LandmarkTable.padLeft(this.levelDifference, LandmarkTable.this.maxLengthLevelDifference));
 			buffer.append(" ");
 			buffer.append(this.landmark.getCategory());
 			buffer.append(" '");
