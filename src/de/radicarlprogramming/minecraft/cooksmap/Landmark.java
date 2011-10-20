@@ -7,9 +7,9 @@ public class Landmark {
 
 	private final Integer id;
 	private final Position position;
-	private final String category;
-	private final String description;
-	private final boolean isPrivate;
+	private String category;
+	private String description;
+	private boolean isPrivate;
 	private final String playerName;
 
 	public Landmark(Location location, int id, String category, String description, String playerName, boolean isPrivate) {
@@ -73,5 +73,27 @@ public class Landmark {
 
 	public Distance getDistance(Player player) {
 		return Distance.calculateDistance(player, this);
+	}
+
+	public void setCategory(String category) {
+		if (category != null && !category.isEmpty()) {
+			this.category = category.toLowerCase();
+		}
+	}
+
+	public void setDescription(String description) {
+		if (description != null && !description.isEmpty()) {
+			this.description = description;
+		}
+
+	}
+
+	public void setVisibility(String visibility) {
+		if ("+".equals(visibility)) {
+			this.isPrivate = false;
+		} else if ("-".equals(visibility)) {
+			this.isPrivate = true;
+		}
+
 	}
 }

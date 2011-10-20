@@ -11,6 +11,7 @@ commands:
             /<command> set <id>
             /<command> dist
             /<command> rm <id>
+            /<command> edit <id> [visibility=[+|-]|category=<category>|description=<description>]
       
 permissions:
     cmap.*:
@@ -22,6 +23,7 @@ permissions:
             cmap.list: true
             cmap.rm: true
             cmap.dist: true
+            cmap.edit: true
     cmap.set:
         description: Allows player to sets location with the given id as compass target
         default: true
@@ -33,6 +35,9 @@ permissions:
         default: true 
     cmap.rm:
         description: Allows player to remove own landmarks
+        default: true 
+    cmap.edit:
+        description: Allows player to edit category, description and visibility of own landmarks
         default: true 
     cmap.dist:
         description: Allows player to see the distance to his compass target

@@ -7,6 +7,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -20,7 +22,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import de.radicarlprogramming.minecraft.cooksmap.comparator.LandmarkComparator;
 import de.radicarlprogramming.minecraft.cooksmap.listener.DeathListener;
-import de.radicarlprogramming.minecraft.cooksmap.listener.RespawnListener;
 import de.radicarlprogramming.minecraft.cooksmap.persistence.MapLoader;
 import de.radicarlprogramming.minecraft.cooksmap.persistence.MapSaver;
 import de.radicarlprogramming.minecraft.cooksmap.ui.LandmarkList;
@@ -32,7 +33,7 @@ public class CooksMapPlugin extends JavaPlugin {
 	Logger log = Logger.getLogger("Minecraft");
 	private final HashMap<World, Map> maps = new HashMap<World, Map>();
 	private final DeathListener deathListener = new DeathListener(this);
-	private final RespawnListener respawnListener = new RespawnListener();
+	private final HashMap<Player, Location> deathLocations = new HashMap<Player, Location>();
 	public static int ROWS_PER_PAGE = 10;
 
 	/**
@@ -80,7 +81,7 @@ public class CooksMapPlugin extends JavaPlugin {
 		this.log.info("Plugin CooksMap has been disabled");
 	}
 
-	private void saveMap(World world) {
+	public void saveMap(World world) {
 		Map map = this.maps.get(world);
 		String worldName = world.getName();
 		try {
@@ -97,32 +98,20 @@ public class CooksMapPlugin extends JavaPlugin {
 	public void onEnable() {
 		this.log.info("Plugin CooksMap has been enabled");
 		PluginManager pluginManager = this.getServer().getPluginManager();
-		pluginManager.registerEvent(Event.Type.ENTITY_DEATH, this.deathListener, Event.Priority.Normal, this);
-		pluginManager.registerEvent(Event.Type.PLAYER_RESPAWN, this.respawnListener, Event.Priority.Normal, this);
+		pluginManager.registerEvent(Event.Type.ENTITY_DEATH, this.deathListener, Event.Priority.Monitor, this);
 		this.getCommand("cmap").setExecutor(new CommandExecutor() {
+			private static final String REGEX = "( category=(\\w*)| description=([^=]*)| visibility=([\\+\\-])|())+";
+			private static final int INDEX_CATEGORY = 2;
+			private static final int INDEX_DESCRIPTION = 3;
+			private static final int INDEX_VISIBILITY = 4;
+			private final Pattern pattern = Pattern.compile(REGEX, Pattern.CASE_INSENSITIVE);
 
 			@Override
 			public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
 				if (args.length > 0 && sender instanceof Player) {
 					Player player = (Player) sender;
 					if ("add".equals(args[0]) && args.length > 2) {
-						int i = 1;
-						boolean isPrivate = true;
-						if ("public".equals(args[i])) {
-							if (args.length < 3) {
-								// if optional flag public is given, there still
-								// must be a type and a description
-								return false;
-							}
-							isPrivate = false;
-							i++;
-						}
-						String type = args[i++].toLowerCase();
-						String description = args[i++];
-						while (i < args.length) {
-							description += " " + args[i++];
-						}
-						return this.addLandmark(player, type, description, isPrivate);
+						return this.addLandmark(player, args);
 					} else if ("set".equals(args[0]) && args.length > 1) {
 						return this.setLandmark(player, args[1]);
 					} else if ("rm".equals(args[0]) && args.length > 1) {
@@ -131,6 +120,8 @@ public class CooksMapPlugin extends JavaPlugin {
 						return this.calculateDistance(player);
 					} else if ("list".equals(args[0])) {
 						return this.list(player, args);
+					} else if ("edit".equals(args[0]) && args.length > 2) {
+						return this.editLandmark(player, args);
 					}
 				}
 				return false;
@@ -139,8 +130,34 @@ public class CooksMapPlugin extends JavaPlugin {
 			// TODO: implement next and prev list functions, wich use the last
 			// used search string
 
-			// TODO: implement change landmark method for
-			// description/type/visibility
+			private boolean editLandmark(Player player, String[] args) {
+				try {
+					int id = Integer.parseInt(args[1]);
+					Landmark landmark = CooksMapPlugin.this.getMap(player).getLandmark(id);
+					if (landmark == null) {
+						player.sendMessage("No landmark with id " + id + " found.");
+						return true;
+					}
+					if (!player.getName().equals(landmark.getPlayerName())) {
+						player.sendMessage("You can only edit your own landmarks.");
+						return true;
+					}
+					String arguments = "";
+					for (int i = 2; i < args.length; i++) {
+						arguments += " " + args[i];
+					}
+					Matcher matcher = this.pattern.matcher(arguments);
+					if (matcher.matches()) {
+						landmark.setVisibility(matcher.group(INDEX_VISIBILITY));
+						landmark.setDescription(matcher.group(INDEX_DESCRIPTION));
+						landmark.setCategory(matcher.group(INDEX_CATEGORY));
+					}
+					// TODO: feedback
+				} catch (NumberFormatException e) {
+					return false;
+				}
+				return true;
+			}
 
 			private boolean list(Player player, String[] args) {
 				int page = 1;
@@ -248,11 +265,29 @@ public class CooksMapPlugin extends JavaPlugin {
 			 * @param args
 			 * @return
 			 */
-			private boolean addLandmark(Player player, String type, String name, boolean isPublic) {
+			private boolean addLandmark(Player player, String[] args) {
+				int i = 1;
+				boolean isPrivate = true;
+				if ("public".equals(args[i])) {
+					if (args.length < 3) {
+						// if optional flag public is given, there still
+						// must be a type and a description
+						return false;
+					}
+					isPrivate = false;
+					i++;
+				}
+				String type = args[i++].toLowerCase();
+				String description = args[i++];
+				while (i < args.length) {
+					description += " " + args[i++];
+				}
 				Location location = player.getLocation();
-				type = type.replaceAll(";", ",");
-				type = type.replaceAll("(\n|\r)+", " ");
-				int id = CooksMapPlugin.this.getMap(player).addNewLandmark(location, type, name, player, isPublic);
+				type = MapSaver.escapeString(type);
+				description = MapSaver.escapeString(description);
+				Map map = CooksMapPlugin.this.getMap(player);
+				int id = map.addNewLandmark(location, type, description, player, isPrivate);
+				// TODO coords/landmark ausgeben
 				player.sendMessage("New landmark with id " + id + " added.");
 				CooksMapPlugin.this.saveMap(player.getWorld());
 				return true;
@@ -289,5 +324,14 @@ public class CooksMapPlugin extends JavaPlugin {
 			}
 
 		});
+	}
+
+	public void setPlayerDeathLocation(Player player, Location location) {
+		this.deathLocations.put(player, location);
+
+	}
+
+	public Location getDeathlocation(Player player) {
+		return this.deathLocations.remove(player);
 	}
 }

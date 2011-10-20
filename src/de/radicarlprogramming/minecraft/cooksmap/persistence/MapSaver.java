@@ -15,6 +15,10 @@ public class MapSaver extends PrintWriter {
 		super(new BufferedWriter(new FileWriter(file)));
 	}
 
+	public static String escapeString(String string) {
+		return string.replaceAll(";", ",").replaceAll("(\n|\r)+", " ");
+	}
+
 	public void safe(Map map) {
 		for (Integer id : map.getLandmarks().keySet()) {
 			Landmark landmark = map.getLandmarks().get(id);

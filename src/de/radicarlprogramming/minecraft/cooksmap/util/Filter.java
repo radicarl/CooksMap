@@ -15,6 +15,8 @@ public class Filter {
 	private static final int INDEX_COMPARATOR = 2;
 	private static final int INDEX_VALUE = 4;
 	private static final String REGEX = "([a-zA-z]*)(%|!?=|(<|>)=?)([^<>=!].*)";
+	private final Pattern pattern = Pattern.compile(Filter.REGEX, Pattern.CASE_INSENSITIVE);
+
 	@SuppressWarnings("rawtypes")
 	private Comparable value;
 	private Method getter;
@@ -24,8 +26,7 @@ public class Filter {
 
 	public Filter(String arg, Player player) throws NoSuchMethodException, InvalidFilterException {
 		this.player = player;
-		Pattern pattern = Pattern.compile(Filter.REGEX, Pattern.CASE_INSENSITIVE);
-		Matcher matcher = pattern.matcher(arg);
+		Matcher matcher = this.pattern.matcher(arg);
 		if (matcher.matches()) {
 			this.setGetter(matcher);
 			this.setComparator(matcher);
