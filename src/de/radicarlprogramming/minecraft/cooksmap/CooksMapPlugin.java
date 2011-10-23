@@ -33,6 +33,7 @@ import de.radicarlprogramming.minecraft.cooksmap.util.LandmarkFilterer;
 
 // TODO: test multiworld capability
 // TODO: junit tests, how to mock World, Player, tests eventlistner?
+// TODO: implement command filter and sort and use list only for displaying a list using the actual sort and list settings
 public class CooksMapPlugin extends JavaPlugin {
 	Logger log = Logger.getLogger("Minecraft");
 	private final HashMap<World, Map> maps = new HashMap<World, Map>();
@@ -75,7 +76,6 @@ public class CooksMapPlugin extends JavaPlugin {
 	 * @return Map map
 	 */
 	public Map getMap(Player player) {
-		// TODO: what if world is null? can it be?
 		return this.getMap(player.getWorld());
 	}
 
@@ -116,9 +116,10 @@ public class CooksMapPlugin extends JavaPlugin {
 		pluginManager.registerEvent(Event.Type.ENTITY_DEATH, this.deathListener, Event.Priority.Monitor, this);
 		pluginManager.registerEvent(Event.Type.PLAYER_RESPAWN, this.respawnListener, Event.Priority.Normal, this);
 		this.getCommand("cmap").setExecutor(new CommandExecutor() {
-			private static final String REGEX = "( category=(\\w*)| description=([^=]*)| visibility=([\\+\\-])|())+";
+			// TODO: use shortcuts c,n,v
+			private static final String REGEX = "( category=(\\w*)| name=([^=]*)| visibility=([\\+\\-])|())+";
 			private static final int INDEX_CATEGORY = 2;
-			private static final int INDEX_DESCRIPTION = 3;
+			private static final int INDEX_NAME = 3;
 			private static final int INDEX_VISIBILITY = 4;
 			private final Pattern pattern = Pattern.compile(REGEX, Pattern.CASE_INSENSITIVE);
 
@@ -150,13 +151,13 @@ public class CooksMapPlugin extends JavaPlugin {
 
 			private boolean listNextPage(Player player) {
 				CooksMapSession session = CooksMapPlugin.this.getSession(player);
-				return this.displayList(player, session.getPage() + 1, session.getLandmarkList());
+				return this.displayList(player, session.getPage() + 1, session);
 			}
 
 			private boolean listPreviousPage(Player player) {
 				CooksMapSession session = CooksMapPlugin.this.getSession(player);
 				int page = Math.max(1, session.getPage() - 1);
-				return this.displayList(player, page, session.getLandmarkList());
+				return this.displayList(player, page, session);
 			}
 
 			private boolean editLandmark(Player player, String[] args) {
@@ -177,12 +178,9 @@ public class CooksMapPlugin extends JavaPlugin {
 					}
 					Matcher matcher = this.pattern.matcher(arguments);
 					if (matcher.matches()) {
-						// TODO: if visibility has changed, update all lists
-						// (map and session)
-						// TODO: let map do the change for easier listener calls
-						landmark.setVisibility(matcher.group(INDEX_VISIBILITY));
-						landmark.setDescription(matcher.group(INDEX_DESCRIPTION));
-						landmark.setCategory(matcher.group(INDEX_CATEGORY));
+						landmark.changeLandmark(matcher.group(INDEX_VISIBILITY),
+								matcher.group(INDEX_CATEGORY),
+								matcher.group(INDEX_NAME));
 						CooksMapPlugin.this.saveMap(player.getWorld());
 					}
 					// TODO: feedback
@@ -226,20 +224,18 @@ public class CooksMapPlugin extends JavaPlugin {
 					}
 				}
 
-				Map map = CooksMapPlugin.this.getMap(player);
-				List<Landmark> landmarks = filterer.filter(map.getLandmarks(player));
-				if (firstComparator != null) {
-					Collections.sort(map.getLandmarks(player), firstComparator);
-				}
-
 				CooksMapSession session = CooksMapPlugin.this.getSession(player);
-				session.setLandmarkList(landmarks);
 				session.setPage(page);
+				session.setFilterer(filterer);
+				session.setComparator(firstComparator);
 
-				return this.displayList(player, page, landmarks);
+				return this.displayList(player, page, session);
 			}
 
-			private boolean displayList(Player player, int page, List<Landmark> landmarks) {
+			private boolean displayList(Player player, int page, CooksMapSession session) {
+				List<Landmark> landmarks = session.getFilterer().filter(CooksMapPlugin.this.getMap(player)
+						.getLandmarks(player));
+				Collections.sort(landmarks, session.getComparator());
 				int pages = (int) (Math.ceil(landmarks.size() / (CooksMapPlugin.ROWS_PER_PAGE - 1.0)));
 				LandmarkTable table = new LandmarkTable(pages, player);
 				int offset = (page - 1) * (CooksMapPlugin.ROWS_PER_PAGE - 1);
@@ -312,23 +308,22 @@ public class CooksMapPlugin extends JavaPlugin {
 				if ("public".equals(args[i])) {
 					if (args.length < 3) {
 						// if optional flag public is given, there still
-						// must be a type and a description
+						// must be a type and a name
 						return false;
 					}
 					isPrivate = false;
 					i++;
 				}
 				String type = args[i++].toLowerCase();
-				String description = args[i++];
+				String name = args[i++];
 				while (i < args.length) {
-					description += " " + args[i++];
+					name += " " + args[i++];
 				}
 				Location location = player.getLocation();
 				type = MapSaver.escapeString(type);
-				description = MapSaver.escapeString(description);
+				name = MapSaver.escapeString(name);
 				Map map = CooksMapPlugin.this.getMap(player);
-				int id = map.addNewLandmark(location, type, description, player, isPrivate);
-				// TODO coords/landmark ausgeben
+				int id = map.addNewLandmark(location, type, name, player, isPrivate);
 				player.sendMessage("New landmark with id " + id + " added.");
 				CooksMapPlugin.this.saveMap(player.getWorld());
 				return true;
@@ -343,7 +338,7 @@ public class CooksMapPlugin extends JavaPlugin {
 			 * @return
 			 */
 			private boolean setLandmark(Player player, String idString) {
-				// TODO: set by description, if more then one matches, show list
+				// TODO: set by name, if more then one matches, show list
 				try {
 					int id = Integer.parseInt(idString);
 					Landmark landmark = CooksMapPlugin.this.getMap(player).getLandmark(id);
@@ -356,7 +351,7 @@ public class CooksMapPlugin extends JavaPlugin {
 						player.setCompassTarget(new Location(player.getWorld(), target.getX(), target.getY(), target
 								.getZ()));
 						Distance distance = Distance.calculateDistance(player, landmark);
-						player.sendMessage("New Target: " + landmark.getDescription() + ". " + distance);
+						player.sendMessage("New Target: " + landmark.getName() + ". " + distance);
 					}
 				} catch (NumberFormatException e) {
 					player.sendMessage("id must be an integer");

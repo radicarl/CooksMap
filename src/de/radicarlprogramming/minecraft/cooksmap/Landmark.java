@@ -1,32 +1,40 @@
 package de.radicarlprogramming.minecraft.cooksmap;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Logger;
+
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+
+import de.radicarlprogramming.minecraft.cooksmap.listener.LandmarkChangedEvent;
+import de.radicarlprogramming.minecraft.cooksmap.listener.LandmarkListener;
 
 public class Landmark {
 
 	private final Integer id;
 	private final Position position;
 	private String category;
-	private String description;
+	private String name;
 	private boolean isPrivate;
 	private final String playerName;
+	private final List<LandmarkListener> listeners = new ArrayList<LandmarkListener>();
 
-	public Landmark(Location location, int id, String category, String description, String playerName, boolean isPrivate) {
+	public Landmark(Location location, int id, String category, String name, String playerName, boolean isPrivate) {
 		this.id = id;
 		this.position = new Position(location);
 		this.category = category.toLowerCase();
-		this.description = description;
+		this.name = name;
 		this.playerName = playerName;
 		this.isPrivate = isPrivate;
 	}
 
-	public Landmark(int x, int y, int z, int id, String category, String description, String playerName,
+	public Landmark(int x, int y, int z, int id, String category, String name, String playerName,
 			boolean isPrivate) {
 		this.id = id;
 		this.position = new Position(x, y, z);
 		this.category = category.toLowerCase();
-		this.description = description;
+		this.name = name;
 		this.isPrivate = isPrivate;
 		this.playerName = playerName;
 	}
@@ -55,8 +63,8 @@ public class Landmark {
 		return this.category;
 	}
 
-	public String getDescription() {
-		return this.description;
+	public String getName() {
+		return this.name;
 	}
 
 	public String getPlayerName() {
@@ -75,25 +83,49 @@ public class Landmark {
 		return Distance.calculateDistance(player, this);
 	}
 
-	public void setCategory(String category) {
-		if (category != null && !category.isEmpty()) {
+	public void changeLandmark(String visibility, String category, String name) {
+		LandmarkChangedEvent event = new LandmarkChangedEvent(this);
+		if (category != null && !category.isEmpty() && !category.equalsIgnoreCase(this.category)) {
 			this.category = category.toLowerCase();
+			event.markCategoryAsChanged();
+		}
+		if (name != null && !name.isEmpty() && !name.equals(this.name)) {
+			this.name = name;
+			event.markNameAsChanged();
+		}
+		if (visibility != null && !visibility.isEmpty()) {
+			visibility = visibility.trim();
+			if ("+".equals(visibility) && this.isPrivate) {
+				// landmark was private, but now it should be public
+				this.isPrivate = false;
+				event.markVisibilityAsChanged();
+			} else if ("-".equals(visibility) && !this.isPrivate) {
+				// landmark is public, but now it should be private
+				this.isPrivate = true;
+				event.markVisibilityAsChanged();
+			}
+		}
+		Logger.getLogger("Minecraft").info("has changed:" + event.isLandmarkChanged());
+		Logger.getLogger("Minecraft").info("has visibility changed:" + event.isVisibilityChanged());
+		if (event.isLandmarkChanged()) {
+			for (LandmarkListener listener : this.listeners) {
+				Logger.getLogger("Minecraft").info("notify:" + listener.toString());
+				listener.landmarkChanged(event);
+			}
 		}
 	}
 
-	public void setDescription(String description) {
-		if (description != null && !description.isEmpty()) {
-			this.description = description;
+	public void addListener(LandmarkListener listener) {
+		if (!this.listeners.contains(listener)) {
+			this.listeners.add(listener);
 		}
-
 	}
 
-	public void setVisibility(String visibility) {
-		if ("+".equals(visibility)) {
-			this.isPrivate = false;
-		} else if ("-".equals(visibility)) {
-			this.isPrivate = true;
-		}
+	public void removeListener(LandmarkListener listener) {
+		this.listeners.remove(listener);
+	}
 
+	public void removeAllListener() {
+		this.listeners.clear();
 	}
 }

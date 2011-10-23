@@ -27,8 +27,9 @@ public class DeathListener extends EntityListener {
 					"death",
 					date + " " + player.getName(),
 					player,
-					false);
-			player.sendMessage("Your death landmark has id " + id + ". Set your compass target: /cmap set " + id);
+					true);
+			player.sendMessage("You died. To set your compass target to your death location enter:");
+			player.sendMessage("/cmap set " + id);
 			this.plugin.saveMap(player.getWorld());
 		}
 	}

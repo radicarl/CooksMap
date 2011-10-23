@@ -42,10 +42,11 @@ public abstract class LandmarkComparator implements Comparator<Landmark> {
 		boolean sortAscending = arg.startsWith("+");
 		String type = arg.substring(1).toLowerCase();
 		LandmarkComparator comparator = null;
+		// TODO: use shortcuts c,n,i,d
 		if ("category".equals(type)) {
 			comparator = new CategoryComparator(sortAscending);
-		} else if ("description".equals(type)) {
-			comparator = new DescriptionComparator(sortAscending);
+		} else if ("name".equals(type)) {
+			comparator = new NameComparator(sortAscending);
 		} else if ("distance".equals(type)) {
 			comparator = new DistanceComparator(player, sortAscending);
 		} else {

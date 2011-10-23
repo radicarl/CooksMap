@@ -12,9 +12,6 @@ import de.radicarlprogramming.minecraft.cooksmap.Landmark;
 public class LandmarkTable {
 	private int pages = 1;
 	private int maxLengthId = 0;
-	private int maxLengthX = 0;
-	private int maxLengthY = 0;
-	private int maxLengthZ = 0;
 	private int maxLengthDistance = 0;
 	private int maxLengthLevelDifference;
 
@@ -31,11 +28,27 @@ public class LandmarkTable {
 	}
 
 	public void getPrintString(Player player, int page) {
-		String coords = " [X,Y,Z]->distance";
-		// +6 cause of [,,]->
-		int lengthCoords = Math.max(coords.length(), this.maxLengthX + this.maxLengthY + this.maxLengthZ + 6);
-		player.sendMessage(LandmarkTable.padRight(" id", this.maxLengthId) + LandmarkTable.padRight(coords, lengthCoords)
-				+ " Category   Description         (Page " + page + "/" + this.pages + ")");
+		StringBuffer buffer = new StringBuffer(ChatColor.YELLOW.toString());
+		buffer.append("i");
+		buffer.append(ChatColor.WHITE);
+		buffer.append("d:");
+
+		buffer.append(ChatColor.YELLOW);
+		buffer.append("  d");
+		buffer.append(ChatColor.WHITE);
+		buffer.append("istance");
+
+		buffer.append(ChatColor.YELLOW);
+		buffer.append("  c");
+		buffer.append(ChatColor.WHITE);
+		buffer.append("ategory   ");
+
+		buffer.append(ChatColor.YELLOW);
+		buffer.append("n");
+		buffer.append(ChatColor.WHITE);
+		buffer.append("ame             (Page " + page + "/" + this.pages + ")");
+
+		player.sendMessage(buffer.toString());
 		for (LandmarkTabletRow row : this.rows) {
 			player.sendMessage(row.getPrintString());
 		}
@@ -67,9 +80,6 @@ public class LandmarkTable {
 
 	private class LandmarkTabletRow {
 		private final String id;
-		private final String x;
-		private final String y;
-		private final String z;
 		private final String distance;
 		private final Landmark landmark;
 		private final String levelDifference;
@@ -77,44 +87,39 @@ public class LandmarkTable {
 		private LandmarkTabletRow(Landmark landmark) {
 			this.landmark = landmark;
 			this.id = String.valueOf(landmark.getId().intValue());
-			this.x = String.valueOf(landmark.getX());
-			this.y = String.valueOf(landmark.getY());
-			this.z = String.valueOf(landmark.getZ());
 			Distance distance = Distance.calculateDistance(LandmarkTable.this.player, landmark);
 			this.distance = String.valueOf(distance.getDistance());
 			this.levelDifference = String.valueOf(distance.getLevelDifference());
 
 			LandmarkTable.this.maxLengthId = Math.max(LandmarkTable.this.maxLengthId, this.id.length());
-			LandmarkTable.this.maxLengthX = Math.max(LandmarkTable.this.maxLengthX, this.x.length());
-			LandmarkTable.this.maxLengthY = Math.max(LandmarkTable.this.maxLengthY, this.y.length());
-			LandmarkTable.this.maxLengthZ = Math.max(LandmarkTable.this.maxLengthZ, this.z.length());
-			LandmarkTable.this.maxLengthZ = Math.max(LandmarkTable.this.maxLengthZ, this.z.length());
-			LandmarkTable.this.maxLengthDistance = Math.max(LandmarkTable.this.maxLengthDistance, this.distance.length());
+			LandmarkTable.this.maxLengthDistance = Math.max(LandmarkTable.this.maxLengthDistance,
+					this.distance.length());
 			LandmarkTable.this.maxLengthLevelDifference = Math.max(LandmarkTable.this.maxLengthLevelDifference,
 					this.levelDifference.length());
 		}
 
 		public String getPrintString() {
-			StringBuffer buffer = new StringBuffer((this.landmark.isPrivate()) ? ChatColor.DARK_RED.toString()
-					: ChatColor.DARK_GREEN.toString());
+			StringBuffer buffer = new StringBuffer(this.getColor());
 			buffer.append(LandmarkTable.padLeft(this.id, LandmarkTable.this.maxLengthId));
-			buffer.append(" [");
-			buffer.append(LandmarkTable.padLeft(this.x, LandmarkTable.this.maxLengthX));
-			buffer.append(",");
-			buffer.append(LandmarkTable.padLeft(this.y, LandmarkTable.this.maxLengthY));
-			buffer.append(",");
-			buffer.append(LandmarkTable.padLeft(this.z, LandmarkTable.this.maxLengthZ));
-			buffer.append("]->");
+			buffer.append(": ");
 			buffer.append(LandmarkTable.padLeft(this.distance, LandmarkTable.this.maxLengthDistance));
 			buffer.append("/");
 			buffer.append(LandmarkTable.padLeft(this.levelDifference, LandmarkTable.this.maxLengthLevelDifference));
-			buffer.append(" ");
+			buffer.append("  ");
 			buffer.append(this.landmark.getCategory());
-			buffer.append(" '");
-			// TODO: calc max rowlength and shorten description if longer
-			buffer.append(this.landmark.getDescription());
+			buffer.append("  '");
+			// TODO: calc max rowlength and shorten name if longer (etwa
+			// 50 6er Zeichen)
+			buffer.append(this.landmark.getName());
 			buffer.append("'");
 			return buffer.toString();
+		}
+
+		private String getColor() {
+			if (!this.landmark.getPlayerName().equals(LandmarkTable.this.player.getName())) {
+				return ChatColor.WHITE.toString();
+			}
+			return (this.landmark.isPrivate()) ? ChatColor.DARK_GREEN.toString() : ChatColor.GREEN.toString();
 		}
 	}
 }

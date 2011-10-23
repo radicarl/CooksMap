@@ -8,7 +8,10 @@ import java.util.logging.Logger;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
-public class Map {
+import de.radicarlprogramming.minecraft.cooksmap.listener.LandmarkChangedEvent;
+import de.radicarlprogramming.minecraft.cooksmap.listener.LandmarkListener;
+
+public class Map implements LandmarkListener {
 	/**
 	 * Contains all landmarks mapped to their ids.
 	 */
@@ -29,25 +32,28 @@ public class Map {
 	}
 
 	/**
-	 * Adds a new landmark with the given location, type, description, player
-	 * name and visible state to the map and to the landmarks list of those
-	 * player who can see the new landmark. Returns the id for this landmark.
+	 * Adds a new landmark with the given location, type, name, player name and
+	 * visible state to the map and to the landmarks list of those player who
+	 * can see the new landmark. Returns the id for this landmark.
 	 * 
 	 * @param location
 	 *            x,y and z coordinates for the landmark
 	 * @param type
 	 *            , type of the landmark (for example: home, mine, dungeon...)
-	 * @param description
+	 * @param name
 	 * @param player
 	 *            , name of the player who owns the new landmark
 	 * @param isPublic
 	 *            , true if everybody can see the new landmark
 	 * @return id of the added landmark
 	 */
-	public int addNewLandmark(Location location, String type, String description, Player player, boolean isPublic) {
-		Landmark landmark = new Landmark(location, ++this.lastId, type, description, player.getName(), isPublic);
+	public int addNewLandmark(Location location, String type, String name, Player player, boolean isPublic) {
+		Landmark landmark = new Landmark(location, ++this.lastId, type, name, player.getName(), isPublic);
 		this.landmarksById.put(landmark.getId(), landmark);
-		this.add2PlayersLists(landmark);
+		this.addToPlayersLists(landmark);
+
+		// register map as LandmarkListener
+		landmark.addListener(this);
 		return this.lastId;
 	}
 
@@ -57,7 +63,7 @@ public class Map {
 	 * 
 	 * @param landmark
 	 */
-	private void add2PlayersLists(Landmark landmark) {
+	private void addToPlayersLists(Landmark landmark) {
 		for (Entry<String, ArrayList<Landmark>> entry : this.landmarksByPlayer.entrySet()) {
 			if (landmark.isVisible(entry.getKey())) {
 				entry.getValue().add(landmark);
@@ -78,18 +84,22 @@ public class Map {
 		// remove Landmark from global list
 		Landmark landmark = this.landmarksById.remove(new Integer(id));
 		if (landmark != null) {
+			// remove Landmark from owners list
 			ArrayList<Landmark> playersLandmarks = this.landmarksByPlayer.get(removedBy.getName());
+			// the list for the player have not been create yet -> null check
+			// getLandmarks(player) is not used, because it is not necessary to
+			// create the list for removing the landmark
 			if (playersLandmarks != null) {
 				playersLandmarks.remove(landmark);
-				if (!landmark.isPrivate()) {
-					// if Landmark was public, remove it from all other lists
-					for (ArrayList<Landmark> landmarks : this.landmarksByPlayer.values())
-						landmarks.remove(landmark);
-				}
-			} else {
-				Map.log.warning("Could not remove landmark with id " + id + ". Reason: no map found for player "
-						+ removedBy.getName() + ".");
 			}
+			if (!landmark.isPrivate()) {
+				// if Landmark was public, remove it from all other lists
+				for (ArrayList<Landmark> landmarks : this.landmarksByPlayer.values())
+					landmarks.remove(landmark);
+			}
+
+			// remove all Listeners from landmark
+			landmark.removeAllListener();
 		}
 		return landmark;
 	}
@@ -109,7 +119,8 @@ public class Map {
 		if (!this.landmarksById.containsKey(id)) {
 			this.landmarksById.put(id, landmark);
 			this.lastId = Math.max(id, this.lastId);
-			this.add2PlayersLists(landmark);
+			this.addToPlayersLists(landmark);
+			landmark.addListener(this);
 		} else {
 			// TODO: throw exception
 			Map.log.warning("Could not add Landmark with id " + id
@@ -124,7 +135,8 @@ public class Map {
 
 	/**
 	 * Returns the list of Landmarks visible for the given player. If the list
-	 * does not exists, it is created and filled with the specified landmarks.
+	 * does not exists, it is created and filled with the for the given player
+	 * visible landmarks.
 	 * 
 	 * @param name
 	 * @return
@@ -144,5 +156,27 @@ public class Map {
 			}
 		}
 		return landmarks;
+	}
+
+	@Override
+	public void landmarkChanged(LandmarkChangedEvent event) {
+		Landmark landmark = event.getLandmark();
+		Map.log.info("visibilityChandeg: " + event.isVisibilityChanged());
+		if (event.isVisibilityChanged()) {
+			// add or remove the landmark to the player lists
+			Map.log.info("landmark changed:" + landmark.getId());
+			for (Entry<String, ArrayList<Landmark>> entry : this.landmarksByPlayer.entrySet()) {
+				String playerName = entry.getKey();
+				ArrayList<Landmark> landmarkList = entry.getValue();
+				Map.log.info("editing list for player :" + playerName);
+				if (landmark.isVisible(playerName) && !landmarkList.contains(landmark)) {
+					landmarkList.add(landmark);
+					Map.log.info("adding landmark to list of player :" + playerName);
+				} else if (!landmark.isVisible(playerName) && landmarkList.contains(landmark)) {
+					landmarkList.remove(landmark);
+					Map.log.info("removing landmark from list of player :" + playerName);
+				}
+			}
+		}
 	}
 }

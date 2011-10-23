@@ -9,11 +9,11 @@ commands:
             /<command> list [page]
             /<command> next
             /<command> prev
-            /<command> add [public] <type> <description>
+            /<command> add [public] <type> <name>
             /<command> set <id>
             /<command> dist
             /<command> rm <id>
-            /<command> edit <id> [visibility=[+|-]|category=<category>|description=<description>]
+            /<command> edit <id> [visibility=[+|-]|category=<category>|name=<name>]
       
 permissions:
     cmap.*:
@@ -47,7 +47,7 @@ permissions:
         description: Allows player to remove own landmarks
         default: true 
     cmap.edit:
-        description: Allows player to edit category, description and visibility of own landmarks
+        description: Allows player to edit category, name and visibility of own landmarks
         default: true 
     cmap.dist:
         description: Allows player to see the distance to his compass target

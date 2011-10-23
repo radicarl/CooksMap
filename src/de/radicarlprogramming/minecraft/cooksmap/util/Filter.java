@@ -72,6 +72,7 @@ public class Filter {
 	private void setGetter(Matcher matcher) throws NoSuchMethodException {
 		this.fieldName = matcher.group(Filter.INDEX_FIELDNAME).toLowerCase();
 		String methodName = "get" + this.fieldName.substring(0, 1).toUpperCase() + this.fieldName.substring(1);
+		// TODO: use shortcuts c,n,v,i,d
 		if (this.filterByDistance()) {
 			this.getter = Landmark.class.getDeclaredMethod(methodName, Player.class);
 		} else {

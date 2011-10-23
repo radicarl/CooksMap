@@ -121,7 +121,7 @@ public class Distance implements Comparable<Distance> {
 	}
 
 	private static Distance calculateDistance(int posX, int posY, int posZ, int targetX, int targetY, int targetZ) {
-		return new Distance((int) Math.sqrt(Math.pow(posX - targetX, 2) + Math.pow(posZ - targetZ, 2)), posY - targetY);
+		return new Distance((int) Math.sqrt(Math.pow(posX - targetX, 2) + Math.pow(posZ - targetZ, 2)), targetY - posY);
 	}
 
 	@Override
