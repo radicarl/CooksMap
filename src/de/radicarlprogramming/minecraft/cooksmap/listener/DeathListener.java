@@ -30,6 +30,9 @@ public class DeathListener extends EntityListener {
 					true);
 			player.sendMessage("You died. To set your compass target to your death location enter:");
 			player.sendMessage("/cmap set " + id);
+			// TODO remove death oldest locations of this player while there are
+			// more then x.
+			// TODO make x configurable
 			this.plugin.saveMap(player.getWorld());
 		}
 	}

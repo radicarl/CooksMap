@@ -29,8 +29,7 @@ public class Landmark {
 		this.isPrivate = isPrivate;
 	}
 
-	public Landmark(int x, int y, int z, int id, String category, String name, String playerName,
-			boolean isPrivate) {
+	public Landmark(int x, int y, int z, int id, String category, String name, String playerName, boolean isPrivate) {
 		this.id = id;
 		this.position = new Position(x, y, z);
 		this.category = category.toLowerCase();
@@ -41,6 +40,10 @@ public class Landmark {
 
 	public Integer getId() {
 		return new Integer(this.id);
+	}
+
+	public Integer getI() {
+		return this.getId();
 	}
 
 	public Position getPosition() {
@@ -63,8 +66,16 @@ public class Landmark {
 		return this.category;
 	}
 
+	public String getC() {
+		return this.getCategory();
+	}
+
 	public String getName() {
 		return this.name;
+	}
+
+	public String getN() {
+		return this.getName();
 	}
 
 	public String getPlayerName() {
@@ -81,6 +92,10 @@ public class Landmark {
 
 	public Distance getDistance(Player player) {
 		return Distance.calculateDistance(player, this);
+	}
+
+	public Distance getD(Player player) {
+		return this.getDistance(player);
 	}
 
 	public void changeLandmark(String visibility, String category, String name) {

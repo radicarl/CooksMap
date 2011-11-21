@@ -27,7 +27,7 @@ public class LandmarkTable {
 		this.rows.add(new LandmarkTabletRow(landmark));
 	}
 
-	public void getPrintString(Player player, int page) {
+	public void print(Player player, int page) {
 		StringBuffer buffer = new StringBuffer(ChatColor.YELLOW.toString());
 		buffer.append("i");
 		buffer.append(ChatColor.WHITE);
@@ -52,10 +52,6 @@ public class LandmarkTable {
 		for (LandmarkTabletRow row : this.rows) {
 			player.sendMessage(row.getPrintString());
 		}
-	}
-
-	private static String padRight(String string, int length) {
-		return LandmarkTable.pad(string, length, false);
 	}
 
 	private static String padLeft(String string, int length) {

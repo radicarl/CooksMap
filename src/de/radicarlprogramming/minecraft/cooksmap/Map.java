@@ -78,28 +78,34 @@ public class Map implements LandmarkListener {
 	 * @param id
 	 * @param removedBy
 	 * @return
+	 * @throws OwnershipException
 	 */
-	public Landmark removeLandmark(int id, Player removedBy) {
-		// TODO: check if player owns the landmark, otherwise throw exception
+	public Landmark removeLandmark(int id, Player removedBy) throws OwnershipException {
 		// remove Landmark from global list
-		Landmark landmark = this.landmarksById.remove(new Integer(id));
+		Landmark landmark = this.landmarksById.get(new Integer(id));
 		if (landmark != null) {
-			// remove Landmark from owners list
-			ArrayList<Landmark> playersLandmarks = this.landmarksByPlayer.get(removedBy.getName());
-			// the list for the player have not been create yet -> null check
-			// getLandmarks(player) is not used, because it is not necessary to
-			// create the list for removing the landmark
-			if (playersLandmarks != null) {
-				playersLandmarks.remove(landmark);
-			}
-			if (!landmark.isPrivate()) {
-				// if Landmark was public, remove it from all other lists
-				for (ArrayList<Landmark> landmarks : this.landmarksByPlayer.values())
-					landmarks.remove(landmark);
-			}
+			// check if landmark belongs to player
+			if (landmark.isVisible(removedBy.getName())) {
+				// remove Landmark from owners list
+				this.landmarksById.remove(id);
+				ArrayList<Landmark> playersLandmarks = this.landmarksByPlayer.get(removedBy.getName());
+				// the list for the player have not been create yet -> null
+				// check getLandmarks(player) is not used, because it is not
+				// necessary to create the list for removing the landmark
+				if (playersLandmarks != null) {
+					playersLandmarks.remove(landmark);
+				}
+				if (!landmark.isPrivate()) {
+					// if Landmark was public, remove it from all other lists
+					for (ArrayList<Landmark> landmarks : this.landmarksByPlayer.values())
+						landmarks.remove(landmark);
+				}
 
-			// remove all Listeners from landmark
-			landmark.removeAllListener();
+				// remove all Listeners from landmark
+				landmark.removeAllListener();
+			} else {
+				throw new OwnershipException(landmark.getId(), landmark.getPlayerName());
+			}
 		}
 		return landmark;
 	}
@@ -122,7 +128,8 @@ public class Map implements LandmarkListener {
 			this.addToPlayersLists(landmark);
 			landmark.addListener(this);
 		} else {
-			// TODO: throw exception
+			// TODO: write out all landmark values or better write it to
+			// separate file, because after the next save the landmark is gone
 			Map.log.warning("Could not add Landmark with id " + id
 					+ ". Reason: a landmark with this id already exists.");
 		}

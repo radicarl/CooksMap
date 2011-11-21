@@ -27,18 +27,19 @@ import de.radicarlprogramming.minecraft.cooksmap.listener.RespawnListener;
 import de.radicarlprogramming.minecraft.cooksmap.persistence.MapLoader;
 import de.radicarlprogramming.minecraft.cooksmap.persistence.MapSaver;
 import de.radicarlprogramming.minecraft.cooksmap.ui.LandmarkTable;
+import de.radicarlprogramming.minecraft.cooksmap.ui.Manual;
 import de.radicarlprogramming.minecraft.cooksmap.util.Filter;
 import de.radicarlprogramming.minecraft.cooksmap.util.InvalidFilterException;
 import de.radicarlprogramming.minecraft.cooksmap.util.LandmarkFilterer;
 
 // TODO: test multiworld capability
 // TODO: junit tests, how to mock World, Player, tests eventlistner?
-// TODO: implement command filter and sort and use list only for displaying a list using the actual sort and list settings
+// TODO: Version support: http://wiki.bukkit.org/Version_tracking_Tutorial
+// TODO: Config: http://wiki.bukkit.org/Introduction_to_the_New_Configuration
 public class CooksMapPlugin extends JavaPlugin {
 	Logger log = Logger.getLogger("Minecraft");
 	private final HashMap<World, Map> maps = new HashMap<World, Map>();
 	private final DeathListener deathListener = new DeathListener(this);
-	private final HashMap<Player, Location> deathLocations = new HashMap<Player, Location>();
 	private final Listener respawnListener = new RespawnListener();
 	private final HashMap<Player, CooksMapSession> sessions = new HashMap<Player, CooksMapSession>();
 	public static int ROWS_PER_PAGE = 10;
@@ -116,48 +117,71 @@ public class CooksMapPlugin extends JavaPlugin {
 		pluginManager.registerEvent(Event.Type.ENTITY_DEATH, this.deathListener, Event.Priority.Monitor, this);
 		pluginManager.registerEvent(Event.Type.PLAYER_RESPAWN, this.respawnListener, Event.Priority.Normal, this);
 		this.getCommand("cmap").setExecutor(new CommandExecutor() {
-			// TODO: use shortcuts c,n,v
-			private static final String REGEX = "( category=(\\w*)| name=([^=]*)| visibility=([\\+\\-])|())+";
-			private static final int INDEX_CATEGORY = 2;
-			private static final int INDEX_NAME = 3;
-			private static final int INDEX_VISIBILITY = 4;
+			private static final String REGEX = "( c(ategory)?=(\\w*)| n(ame)?=([^=]*)| v(isibility)?=([\\+\\-])|())+";
+			private static final int INDEX_CATEGORY = 3;
+			private static final int INDEX_NAME = 5;
+			private static final int INDEX_VISIBILITY = 7;
 			private final Pattern pattern = Pattern.compile(REGEX, Pattern.CASE_INSENSITIVE);
 
 			@Override
 			public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
 				if (args.length > 0 && sender instanceof Player) {
 					Player player = (Player) sender;
-					if ("add".equalsIgnoreCase(args[0]) && args.length > 2) {
+					String cmapCommand = args[0].toLowerCase();
+					if ("add".equals(cmapCommand) && args.length > 2) {
 						return this.addLandmark(player, args);
-					} else if ("set".equalsIgnoreCase(args[0]) && args.length > 1) {
+					} else if ("set".equals(cmapCommand) && args.length > 1) {
 						return this.setLandmark(player, args[1]);
-					} else if ("rm".equalsIgnoreCase(args[0]) && args.length > 1) {
+					} else if ("del".equals(cmapCommand) && args.length > 1) {
 						return this.removeLandmark(player, args[1]);
-					} else if ("dist".equalsIgnoreCase(args[0])) {
+					} else if ("dist".equals(cmapCommand)) {
 						return this.calculateDistance(player);
-					} else if ("list".equalsIgnoreCase(args[0])) {
+					} else if ("list".equals(cmapCommand)) {
 						return this.list(player, args);
-					} else if ("edit".equalsIgnoreCase(args[0]) && args.length > 2) {
+					} else if ("edit".equals(cmapCommand) && args.length > 2) {
 						return this.editLandmark(player, args);
-					} else if ("next".equalsIgnoreCase(args[0])) {
+					} else if ("n".equals(cmapCommand)) {
 						return this.listNextPage(player);
-					} else if ("prev".equalsIgnoreCase(args[0])) {
+					} else if ("p".equals(cmapCommand)) {
 						return this.listPreviousPage(player);
-
+					} else if ("goto".equals(cmapCommand) && args.length > 1) {
+						return this.gotoPage(player, args[1]);
+					} else if ("help".equals(cmapCommand) && args.length > 1) {
+						return Manual.printHelp(player, args[1]);
 					}
+
+					// TODO implement command show/explain/... (shows last list
+					// command)
+					// TODO implement admin command for deleting landmarks owned
+					// by other players
 				}
+				// TODO: always return true, show own usage page cause of
+				// readability
 				return false;
 			}
 
 			private boolean listNextPage(Player player) {
 				CooksMapSession session = CooksMapPlugin.this.getSession(player);
-				return this.displayList(player, session.getPage() + 1, session);
+				session.incrementPage();
+				return this.displayList(player, session);
 			}
 
 			private boolean listPreviousPage(Player player) {
 				CooksMapSession session = CooksMapPlugin.this.getSession(player);
-				int page = Math.max(1, session.getPage() - 1);
-				return this.displayList(player, page, session);
+				session.decrementPage();
+				return this.displayList(player, session);
+			}
+
+			private boolean gotoPage(Player player, String pageString) {
+				try {
+					int page = Integer.parseInt(pageString);
+					CooksMapSession session = CooksMapPlugin.this.getSession(player);
+					session.setPage(page);
+					return this.displayList(player, session);
+				} catch (NumberFormatException e) {
+					player.sendMessage("Page must be an integer");
+				}
+				return false;
 			}
 
 			private boolean editLandmark(Player player, String[] args) {
@@ -183,19 +207,32 @@ public class CooksMapPlugin extends JavaPlugin {
 								matcher.group(INDEX_NAME));
 						CooksMapPlugin.this.saveMap(player.getWorld());
 					}
-					// TODO: feedback
+					LandmarkTable landmarkTable = new LandmarkTable(1, player);
+					landmarkTable.addLandmarkToList(landmark);
+					landmarkTable.print(player, 1);
+					player.sendMessage("Landmark was changed");
 				} catch (NumberFormatException e) {
-					return false;
+					player.sendMessage("Id must be an integer");
 				}
 				return true;
 			}
 
 			private boolean list(Player player, String[] args) {
 				int page = 1;
+				int argsLength = args.length;
+				try {
+					// Last argument is a page number, so it can not be a filter
+					// or sort argument
+					page = Integer.parseInt(args[argsLength - 1]);
+					argsLength--;
+				} catch (NumberFormatException e) {
+					// Last argument is no page number
+				}
+
 				LandmarkComparator firstComparator = null;
 				LandmarkComparator lastComparator = null;
 				LandmarkFilterer filterer = new LandmarkFilterer();
-				for (int i = 1; i < args.length; i++) {
+				for (int i = 1; i < argsLength; i++) {
 					String arg = args[i];
 					if (arg.matches("(\\+|-).+")) {
 						LandmarkComparator comparator = LandmarkComparator.createComparator(arg, player);
@@ -209,17 +246,11 @@ public class CooksMapPlugin extends JavaPlugin {
 
 					} else {
 						try {
-							page = Integer.parseInt(arg);
-						} catch (NumberFormatException e) {
-							// stay on last set page or on page 1 and try if arg
-							// is a filter
-							try {
-								filterer.addFilter(new Filter(arg, player));
-							} catch (InvalidFilterException e1) {
-								CooksMapPlugin.this.log.warning(e1.getMessage());
-							} catch (NoSuchMethodException e2) {
-								CooksMapPlugin.this.log.warning("Invalid filter colum in " + arg);
-							}
+							filterer.addFilter(new Filter(arg, player));
+						} catch (InvalidFilterException e1) {
+							CooksMapPlugin.this.log.warning(e1.getMessage());
+						} catch (NoSuchMethodException e2) {
+							CooksMapPlugin.this.log.warning("Invalid filter colum in " + arg);
 						}
 					}
 				}
@@ -229,21 +260,26 @@ public class CooksMapPlugin extends JavaPlugin {
 				session.setFilterer(filterer);
 				session.setComparator(firstComparator);
 
-				return this.displayList(player, page, session);
+				return this.displayList(player, session);
 			}
 
-			private boolean displayList(Player player, int page, CooksMapSession session) {
+			private boolean displayList(Player player, CooksMapSession session) {
 				List<Landmark> landmarks = session.getFilterer().filter(CooksMapPlugin.this.getMap(player)
 						.getLandmarks(player));
 				Collections.sort(landmarks, session.getComparator());
+				int page = session.getPage();
 				int pages = (int) (Math.ceil(landmarks.size() / (CooksMapPlugin.ROWS_PER_PAGE - 1.0)));
+				if (page > pages) {
+					session.setPage(pages);
+					page = pages;
+				}
 				LandmarkTable table = new LandmarkTable(pages, player);
 				int offset = (page - 1) * (CooksMapPlugin.ROWS_PER_PAGE - 1);
 				int lastRow = offset + (CooksMapPlugin.ROWS_PER_PAGE - 1);
 				for (; offset < landmarks.size() && offset < lastRow; offset++) {
 					table.addLandmarkToList(landmarks.get(offset));
 				}
-				table.getPrintString(player, page);
+				table.print(player, page);
 				return true;
 			}
 
@@ -282,11 +318,15 @@ public class CooksMapPlugin extends JavaPlugin {
 			private boolean removeLandmark(Player player, String idString) {
 				try {
 					int id = Integer.parseInt(idString);
-					if (CooksMapPlugin.this.getMap(player).removeLandmark(id, player) == null) {
-						player.sendMessage("No landmark with id " + idString + "found.");
-					} else {
-						player.sendMessage("Landmark removed.");
-						CooksMapPlugin.this.saveMap(player.getWorld());
+					try {
+						if (CooksMapPlugin.this.getMap(player).removeLandmark(id, player) == null) {
+							player.sendMessage("No landmark with id " + idString + "found.");
+						} else {
+							player.sendMessage("Landmark removed.");
+							CooksMapPlugin.this.saveMap(player.getWorld());
+						}
+					} catch (OwnershipException e1) {
+						player.sendMessage(e1.getMessage());
 					}
 				} catch (NumberFormatException e) {
 					player.sendMessage("id must be an integer");
@@ -305,14 +345,14 @@ public class CooksMapPlugin extends JavaPlugin {
 			private boolean addLandmark(Player player, String[] args) {
 				int i = 1;
 				boolean isPrivate = true;
-				if ("public".equals(args[i])) {
+				if ("+".equals(args[1]) || "-".equals(args[1])) {
 					if (args.length < 3) {
 						// if optional flag public is given, there still
 						// must be a type and a name
 						return false;
 					}
-					isPrivate = false;
-					i++;
+					isPrivate = "-".equals(args[1]);
+					i = 2;
 				}
 				String type = args[i++].toLowerCase();
 				String name = args[i++];
@@ -360,14 +400,5 @@ public class CooksMapPlugin extends JavaPlugin {
 			}
 
 		});
-	}
-
-	public void setPlayerDeathLocation(Player player, Location location) {
-		this.deathLocations.put(player, location);
-
-	}
-
-	public Location getDeathlocation(Player player) {
-		return this.deathLocations.remove(player);
 	}
 }

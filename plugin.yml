@@ -6,14 +6,16 @@ commands:
     cmap:
         description: Shows the Help for CooksMap.
         usage: |
-            /<command> list [page]
-            /<command> next
-            /<command> prev
-            /<command> add [public] <type> <name>
-            /<command> set <id>
-            /<command> dist
-            /<command> rm <id>
-            /<command> edit <id> [visibility=[+|-]|category=<category>|name=<name>]
+            /<command> list (([<>][idcn]) | ([idcn][<>=!~].+))* <page>? -> list
+            /<command> n -> show next page of last search
+            /<command> p -> show previous page of last search
+            /<command> goto <page> -> show page <page> of last search
+            /<command> add (+|-)? <category> <name> -> add current position
+            /<command> set <id> -> set landmark as new target
+            /<command> dist -> show distance to current target
+            /<command> edit <id> (v=(+|-)|c=<category>|n=<name>)+ -> change landmark
+            /<command> del <id> -> delete landmark
+            /<command> help <Command> -> show help for Command
       
 permissions:
     cmap.*:
@@ -23,11 +25,13 @@ permissions:
             cmap.set: true
             cmap.add: true
             cmap.list: true
-            cmap.next: true
-            cmap.prev: true
+            cmap.n: true
+            cmap.p: true
+            cmap.goto: true
             cmap.rm: true
             cmap.dist: true
             cmap.edit: true
+            cmap.help: true
     cmap.set:
         description: Allows player to sets location with the given id as compass target
         default: true
@@ -35,16 +39,19 @@ permissions:
         description: Allows Player to adds current location to the map
         default: true   
     cmap.list:
-        description: Allows player to list all landmarks
+        description: Allows player to list/search landmarks
         default: true 
-    cmap.next:
+    cmap.n:
         description: Allows player to see next page of his last search
         default: true 
-    cmap.prev:
+    cmap.p:
         description: Allows player to see previous page of his last search
         default: true 
-    cmap.rm:
-        description: Allows player to remove own landmarks
+    cmap.goto:
+        description: Allows player to see given page of his last search
+        default: true 
+    cmap.del:
+        description: Allows player to delete own landmarks
         default: true 
     cmap.edit:
         description: Allows player to edit category, name and visibility of own landmarks
@@ -52,5 +59,8 @@ permissions:
     cmap.dist:
         description: Allows player to see the distance to his compass target
         default: true 
+    cmap.help:
+        description: Allows player to see the help for a command
+        default: true
         
       

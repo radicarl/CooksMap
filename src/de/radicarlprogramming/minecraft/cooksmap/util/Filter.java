@@ -15,7 +15,7 @@ public class Filter {
 	private static final int INDEX_COMPARATOR = 2;
 	private static final int INDEX_VALUE = 4;
 	private static final String REGEX = "([a-zA-z]*)(%|!?=|(<|>)=?)([^<>=!].*)";
-	private final Pattern pattern = Pattern.compile(Filter.REGEX, Pattern.CASE_INSENSITIVE);
+	private static final Pattern pattern = Pattern.compile(Filter.REGEX, Pattern.CASE_INSENSITIVE);
 
 	@SuppressWarnings("rawtypes")
 	private Comparable value;
@@ -26,7 +26,7 @@ public class Filter {
 
 	public Filter(String arg, Player player) throws NoSuchMethodException, InvalidFilterException {
 		this.player = player;
-		Matcher matcher = this.pattern.matcher(arg);
+		Matcher matcher = Filter.pattern.matcher(arg);
 		if (matcher.matches()) {
 			this.setGetter(matcher);
 			this.setComparator(matcher);
@@ -52,19 +52,15 @@ public class Filter {
 
 	private void setComparator(Matcher matcher) throws NoSuchMethodException {
 		String compare = matcher.group(Filter.INDEX_COMPARATOR);
-		if ("<=".equals(compare)) {
-			this.comparator = Filter.class.getDeclaredMethod("isLessOrEqual", Comparable.class);
-		} else if ("<".equals(compare)) {
+		if ("<".equals(compare)) {
 			this.comparator = Filter.class.getDeclaredMethod("isLess", Comparable.class);
-		} else if (">=".equals(compare)) {
-			this.comparator = Filter.class.getDeclaredMethod("isGreaterOrEqual", Comparable.class);
 		} else if (">".equals(compare)) {
 			this.comparator = Filter.class.getDeclaredMethod("isGreater", Comparable.class);
 		} else if ("=".equals(compare)) {
 			this.comparator = Filter.class.getDeclaredMethod("isEqual", Comparable.class);
-		} else if ("!=".equals(compare)) {
+		} else if ("!".equals(compare)) {
 			this.comparator = Filter.class.getDeclaredMethod("isNotEqual", Comparable.class);
-		} else if ("%".equals(compare)) {
+		} else if ("~".equals(compare)) {
 			this.comparator = Filter.class.getDeclaredMethod("match", Comparable.class);
 		}
 	}
@@ -72,7 +68,8 @@ public class Filter {
 	private void setGetter(Matcher matcher) throws NoSuchMethodException {
 		this.fieldName = matcher.group(Filter.INDEX_FIELDNAME).toLowerCase();
 		String methodName = "get" + this.fieldName.substring(0, 1).toUpperCase() + this.fieldName.substring(1);
-		// TODO: use shortcuts c,n,v,i,d
+		// TODO: implement filter by visibility, owned and private, owned and
+		// public, not owned and public
 		if (this.filterByDistance()) {
 			this.getter = Landmark.class.getDeclaredMethod(methodName, Player.class);
 		} else {
@@ -95,7 +92,7 @@ public class Filter {
 	}
 
 	private boolean filterByDistance() {
-		return "distance".equals(this.fieldName);
+		return "distance".equals(this.fieldName) || "d".equals(this.fieldName);
 	}
 
 	@SuppressWarnings({ "unused", "rawtypes", "unchecked" })
@@ -109,18 +106,8 @@ public class Filter {
 	}
 
 	@SuppressWarnings({ "unused", "rawtypes", "unchecked" })
-	private boolean isGreaterOrEqual(Comparable field) {
-		return field.compareTo(this.value) >= 0;
-	}
-
-	@SuppressWarnings({ "unused", "rawtypes", "unchecked" })
 	private boolean isLess(Comparable field) {
 		return field.compareTo(this.value) < 0;
-	}
-
-	@SuppressWarnings({ "unused", "rawtypes", "unchecked" })
-	private boolean isLessOrEqual(Comparable field) {
-		return field.compareTo(this.value) <= 0;
 	}
 
 	@SuppressWarnings({ "unused", "rawtypes", "unchecked" })

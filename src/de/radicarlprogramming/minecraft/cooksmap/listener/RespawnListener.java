@@ -13,6 +13,8 @@ public class RespawnListener extends PlayerListener {
 		Player player = event.getPlayer();
 		// TODO: make this configurable
 		if (!player.getInventory().contains(Material.COMPASS)) {
+			// TODO: strange behavior with adding compass. Dropped one can not
+			// be picked, new one can not be picked up after drop.
 			player.getInventory().addItem(new ItemStack(Material.COMPASS));
 		}
 	}

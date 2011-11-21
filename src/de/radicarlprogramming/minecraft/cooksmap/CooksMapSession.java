@@ -20,6 +20,14 @@ public class CooksMapSession {
 		this.page = page;
 	}
 
+	public void incrementPage() {
+		this.page++;
+	}
+
+	public void decrementPage() {
+		this.page = Math.max(1, this.page - 1);
+	}
+
 	public LandmarkFilterer getFilterer() {
 		if (this.filterer == null) {
 			this.filterer = new LandmarkFilterer();
